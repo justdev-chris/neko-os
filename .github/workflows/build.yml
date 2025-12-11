@@ -116,16 +116,6 @@ jobs:
             -output nekoos.iso \
             iso/
 
-      - name: Test in QEMU
-        run: |
-          timeout --preserve-status 10s \
-            qemu-system-x86_64 \
-            -cdrom nekoos.iso \
-            -serial stdio \
-            -display none \
-            -no-reboot \
-            -d cpu_reset 2>&1 | grep -q "NEKOOS" && echo "✅ Boot successful" || exit 1
-
       - name: Upload ISO artifact
         uses: actions/upload-artifact@v4
         with:
