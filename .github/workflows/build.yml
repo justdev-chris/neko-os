@@ -1,0 +1,116 @@
+name: Build NekoOS
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            nasm \
+            grub-pc-bin \
+            grub-common \
+            xorriso \
+            qemu-system-x86 \
+            git \
+            build-essential \
+            bison \
+            flex \
+            libgmp3-dev \
+            libmpc-dev \
+            libmpfr-dev \
+            texinfo \
+            libisl-dev
+
+      - name: Build cross-compiler
+        run: |
+          # Build and install x86_64-elf cross compiler
+          if [ ! -f "$HOME/cross/bin/x86_64-elf-gcc" ]; then
+            mkdir -p $HOME/cross/src $HOME/cross/build
+            cd $HOME/cross/src
+
+            # Download binutils and gcc
+            wget https://ftp.gnu.org/gnu/binutils/binutils-2.42.tar.gz
+            wget https://ftp.gnu.org/gnu/gcc/gcc-13.2.0/gcc-13.2.0.tar.gz
+
+            tar xf binutils-2.42.tar.gz
+            tar xf gcc-13.2.0.tar.gz
+
+            # Build binutils
+            mkdir -p ../build/binutils
+            cd ../build/binutils
+            ../../src/binutils-2.42/configure \
+              --target=x86_64-elf \
+              --prefix="$HOME/cross" \
+              --with-sysroot \
+              --disable-nls \
+              --disable-werror
+            make -j$(nproc)
+            make install
+            cd ..
+
+            # Build gcc
+            mkdir -p gcc
+            cd gcc
+            ../../src/gcc-13.2.0/configure \
+              --target=x86_64-elf \
+              --prefix="$HOME/cross" \
+              --disable-nls \
+              --enable-languages=c,c++ \
+              --without-headers
+            make all-gcc -j$(nproc)
+            make all-target-libgcc -j$(nproc)
+            make install-gcc
+            make install-target-libgcc
+          fi
+
+          # Add cross-compiler to PATH
+          echo "$HOME/cross/bin" >> $GITHUB_PATH
+
+      - name: Build kernel
+        run: |
+          # Create object files
+          nasm -f elf64 src/boot/boot.asm -o boot.o
+          $HOME/cross/bin/x86_64-elf-gcc -c src/kernel/main.c -o main.o \
+            -ffreestanding -mno-red-zone -mcmodel=large -I src/kernel
+          $HOME/cross/bin/x86_64-elf-gcc -c src/kernel/vga.c -o vga.o \
+            -ffreestanding -mno-red-zone -mcmodel=large -I src/kernel
+
+          # Link kernel
+          $HOME/cross/bin/x86_64-elf-ld -nostdlib -T src/linker.ld \
+            boot.o main.o vga.o -o kernel.bin
+
+      - name: Create bootable ISO
+        run: |
+          # Create ISO structure
+          mkdir -p iso/boot/grub
+          cp kernel.bin iso/boot/
+          cp grub/grub.cfg iso/boot/grub/
+
+          # Create ISO using grub-mkrescue
+          grub-mkrescue -o nekoos.iso iso
+
+      - name: Test in QEMU (headless)
+        run: |
+          timeout --preserve-status 10s \
+            qemu-system-x86_64 \
+            -cdrom nekoos.iso \
+            -serial stdio \
+            -display none \
+            -no-reboot \
+            -d cpu_reset 2>&1 | grep -q "NEKOOS" && echo "✅ Boot successful - 'NEKOOS' detected" || exit 1
+
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nekoos-iso
+          path: nekoos.iso
