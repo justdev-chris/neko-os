@@ -20,6 +20,7 @@ jobs:
             grub-pc-bin \
             grub-common \
             xorriso \
+            mtools \
             qemu-system-x86 \
             git \
             build-essential \
@@ -33,12 +34,10 @@ jobs:
 
       - name: Build cross-compiler
         run: |
-          # Build and install x86_64-elf cross compiler
           if [ ! -f "$HOME/cross/bin/x86_64-elf-gcc" ]; then
             mkdir -p $HOME/cross/src $HOME/cross/build
             cd $HOME/cross/src
 
-            # Download binutils and gcc
             wget https://ftp.gnu.org/gnu/binutils/binutils-2.42.tar.gz
             wget https://ftp.gnu.org/gnu/gcc/gcc-13.2.0/gcc-13.2.0.tar.gz
 
@@ -73,33 +72,34 @@ jobs:
             make install-target-libgcc
           fi
 
-          # Add cross-compiler to PATH
           echo "$HOME/cross/bin" >> $GITHUB_PATH
 
       - name: Build kernel
         run: |
-          # Create object files
           nasm -f elf64 src/boot/boot.asm -o boot.o
           $HOME/cross/bin/x86_64-elf-gcc -c src/kernel/main.c -o main.o \
             -ffreestanding -mno-red-zone -mcmodel=large -I src/kernel
           $HOME/cross/bin/x86_64-elf-gcc -c src/kernel/vga.c -o vga.o \
             -ffreestanding -mno-red-zone -mcmodel=large -I src/kernel
 
-          # Link kernel
           $HOME/cross/bin/x86_64-elf-ld -nostdlib -T src/linker.ld \
             boot.o main.o vga.o -o kernel.bin
 
       - name: Create bootable ISO
         run: |
-          # Create ISO structure
           mkdir -p iso/boot/grub
           cp kernel.bin iso/boot/
           cp grub/grub.cfg iso/boot/grub/
 
-          # Create ISO using grub-mkrescue
-          grub-mkrescue -o nekoos.iso iso
+          xorriso -as mkisofs \
+            -R -b boot/grub/eltorito.img \
+            -no-emul-boot -boot-load-size 4 -boot-info-table \
+            --grub2-boot-info \
+            --grub2-mbr /usr/lib/grub/i386-pc/boot_hybrid.img \
+            -o nekoos.iso \
+            iso
 
-      - name: Test in QEMU (headless)
+      - name: Test in QEMU
         run: |
           timeout --preserve-status 10s \
             qemu-system-x86_64 \
@@ -107,7 +107,7 @@ jobs:
             -serial stdio \
             -display none \
             -no-reboot \
-            -d cpu_reset 2>&1 | grep -q "NEKOOS" && echo "✅ Boot successful - 'NEKOOS' detected" || exit 1
+            -d cpu_reset 2>&1 | grep -q "NEKOOS" && echo "✅ Boot successful" || exit 1
 
       - name: Upload ISO artifact
         uses: actions/upload-artifact@v4
