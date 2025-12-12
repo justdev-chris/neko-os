@@ -76,14 +76,22 @@ jobs:
 
       - name: Build kernel
         run: |
+          # Assemble bootloader
           nasm -f elf64 src/boot/boot.asm -o boot.o
+          
+          # Compile all C files
           $HOME/cross/bin/x86_64-elf-gcc -c src/kernel/main.c -o main.o \
+            -ffreestanding -mno-red-zone -mcmodel=large -I src/kernel
+          $HOME/cross/bin/x86_64-elf-gcc -c src/kernel/multiboot.c -o multiboot.o \
+            -ffreestanding -mno-red-zone -mcmodel=large -I src/kernel
+          $HOME/cross/bin/x86_64-elf-gcc -c src/kernel/fb/framebuffer.c -o framebuffer.o \
             -ffreestanding -mno-red-zone -mcmodel=large -I src/kernel
           $HOME/cross/bin/x86_64-elf-gcc -c src/kernel/vga.c -o vga.o \
             -ffreestanding -mno-red-zone -mcmodel=large -I src/kernel
-
+          
+          # Link ALL object files together
           $HOME/cross/bin/x86_64-elf-ld -nostdlib -T src/linker.ld \
-            boot.o main.o vga.o -o kernel.bin
+            boot.o main.o multiboot.o framebuffer.o vga.o -o kernel.bin
 
       - name: Create bootable ISO
         run: |
