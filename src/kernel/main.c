@@ -1,13 +1,22 @@
-void kernel_main() {
-    volatile char *vga = (volatile char*)0xB8000;
+#include "multiboot.h"
+#include "fb/framebuffer.h"
+
+void kernel_main(uint32_t magic, uint32_t mb_info_addr) {
+    // Parse multiboot tags to get framebuffer info
+    parse_multiboot_tags(mb_info_addr);
     
-    // VGA Code Page 437 indices
-    char word[] = {0x4E, 0x45, 0x4B, 0x4F, 0x4F, 0x53}; // N E K O O S
+    // Initialize framebuffer
+    fb_init(fb_addr, fb_width, fb_height, fb_pitch);
     
-    for(int i = 0; i < 6; i++) {
-        vga[(12 * 80 + 37 + i) * 2] = word[i];      // Character
-        vga[(12 * 80 + 37 + i) * 2 + 1] = 0x0F;     // White on black
-    }
+    // Clear to dark blue
+    fb_clear(30, 30, 50);
     
-    while(1) asm("hlt");
+    // Draw a red rectangle
+    fb_draw_rect(100, 100, 200, 100, 255, 0, 0);
+    
+    // Draw a green rectangle
+    fb_draw_rect(400, 200, 150, 150, 0, 255, 0);
+    
+    // Hang forever
+    while(1);
 }
