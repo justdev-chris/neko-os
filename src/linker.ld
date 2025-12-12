@@ -21,8 +21,12 @@ SECTIONS {
         *(.bss)
     }
 
-    /DISCARD/ : {
-        *(.comment)
-        *(.note*)
+    /* Add these for better organization */
+    .kernel_heap : ALIGN(4K) {
+        . = . + 64K;
+    }
+
+    .stack : ALIGN(4K) {
+        . = . + 16K;
     }
 }
