@@ -1,8 +1,5 @@
-all:
-	$(MAKE) -C kernel all
+iso: kernel.bin
+    bash scripts/make-iso.sh
 
-run:
-	$(MAKE) -C kernel run
-
-clean:
-	$(MAKE) -C kernel clean
+run-iso: iso
+    qemu-system-i386 -cdrom nekoos.iso
