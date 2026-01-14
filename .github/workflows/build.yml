@@ -12,19 +12,18 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y \
-          qemu-system \
-          nasm \
-          gcc \
-          make \
-          grub-pc-bin \
-          xorriso
-        wget https://github.com/lordmilko/i686-elf-tools/releases/download/7.1.0/i686-elf-tools-linux.zip
-        unzip i686-elf-tools-linux.zip
-        sudo mv i686-elf-tools /opt/
-        echo "/opt/i686-elf-tools/bin" >> $GITHUB_PATH
+        qemu-system \
+        nasm \
+        gcc \
+        gcc-multilib \
+        make \
+        grub-pc-bin \
+        xorriso
     
-    - name: Build kernel
-      run: make all
+    - name: Build kernel (32-bit)
+      run: |
+        # Use regular gcc with -m32 flag
+        make CC="gcc -m32" all
     
     - name: Build ISO
       run: make iso
