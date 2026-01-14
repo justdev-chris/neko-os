@@ -1,31 +1,33 @@
-void kernel_main(void);
+#include "vga.h"
 
 void kernel_main(void) {
-    // Clear screen
-    char* video_memory = (char*) 0xB8000;
-    for (int i = 0; i < 80 * 25 * 2; i += 2) {
-        video_memory[i] = ' ';
-        video_memory[i+1] = 0x07; // Gray on black
-    }
+    terminal_initialize();
     
-    // Print welcome message
-    const char* welcome = "NekoOS v0.1";
-    char* vga = (char*) 0xB8000;
+    terminal_setcolor(vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLUE));
+    terminal_writestring("========================================\n");
     
-    for (int i = 0; welcome[i] != '\0'; i++) {
-        vga[i*2] = welcome[i];
-        vga[i*2 + 1] = 0x0F; // White on black
-    }
+    terminal_setcolor(vga_entry_color(VGA_COLOR_YELLOW, VGA_COLOR_BLACK));
+    terminal_writestring("              NekoOS v0.1              \n");
     
-    // Print status
-    vga = (char*) 0xB8000 + 160; // Second line
-    const char* status = "Kernel loaded successfully!";
-    for (int i = 0; status[i] != '\0'; i++) {
-        vga[i*2] = status[i];
-        vga[i*2 + 1] = 0x0A; // Green on black
-    }
+    terminal_setcolor(vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLUE));
+    terminal_writestring("========================================\n\n");
     
-    // Hang
+    terminal_setcolor(vga_entry_color(VGA_COLOR_LIGHT_GREEN, VGA_COLOR_BLACK));
+    terminal_writestring("[OK] Kernel loaded\n");
+    
+    terminal_setcolor(vga_entry_color(VGA_COLOR_LIGHT_GREEN, VGA_COLOR_BLACK));
+    terminal_writestring("[OK] VGA terminal initialized\n");
+    
+    terminal_setcolor(vga_entry_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK));
+    terminal_writestring("\n> ");
+    
+    terminal_setcolor(vga_entry_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK));
+    terminal_writestring("Welcome to your custom OS!\n");
+    
+    terminal_setcolor(vga_entry_color(VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK));
+    terminal_writestring("Type 'help' for commands\n");
+    
+    // Hang (we'll add interrupts later)
     while (1) {
         asm volatile ("hlt");
     }
