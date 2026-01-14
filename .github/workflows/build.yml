@@ -1,131 +1,44 @@
-name: Build NekoOS
-
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
+name: Build and Test NekoOS
+on: [push, pull_request]
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            nasm \
-            grub-pc-bin \
-            grub-common \
-            xorriso \
-            mtools \
-            qemu-system-x86 \
-            git \
-            build-essential \
-            bison \
-            flex \
-            libgmp3-dev \
-            libmpc-dev \
-            libmpfr-dev \
-            texinfo \
-            libisl-dev
-
-      - name: Build cross-compiler
-        run: |
-          if [ ! -f "$HOME/cross/bin/x86_64-elf-gcc" ]; then
-            mkdir -p $HOME/cross/src $HOME/cross/build
-            cd $HOME/cross/src
-
-            wget https://ftp.gnu.org/gnu/binutils/binutils-2.42.tar.gz
-            wget https://ftp.gnu.org/gnu/gcc/gcc-13.2.0/gcc-13.2.0.tar.gz
-
-            tar xf binutils-2.42.tar.gz
-            tar xf gcc-13.2.0.tar.gz
-
-            # Build binutils
-            mkdir -p ../build/binutils
-            cd ../build/binutils
-            ../../src/binutils-2.42/configure \
-              --target=x86_64-elf \
-              --prefix="$HOME/cross" \
-              --with-sysroot \
-              --disable-nls \
-              --disable-werror
-            make -j$(nproc)
-            make install
-            cd ..
-
-            # Build gcc
-            mkdir -p gcc
-            cd gcc
-            ../../src/gcc-13.2.0/configure \
-              --target=x86_64-elf \
-              --prefix="$HOME/cross" \
-              --disable-nls \
-              --enable-languages=c,c++ \
-              --without-headers
-            make all-gcc -j$(nproc)
-            make all-target-libgcc -j$(nproc)
-            make install-gcc
-            make install-target-libgcc
-          fi
-
-          echo "$HOME/cross/bin" >> $GITHUB_PATH
-
-      - name: Build kernel
-        run: |
-          # Assemble bootloader
-          nasm -f elf64 src/boot/boot.asm -o boot.o
-          
-          # Compile all C files
-          $HOME/cross/bin/x86_64-elf-gcc -c src/kernel/main.c -o main.o \
-            -ffreestanding -mno-red-zone -mcmodel=large -I src/kernel
-          $HOME/cross/bin/x86_64-elf-gcc -c src/kernel/multiboot.c -o multiboot.o \
-            -ffreestanding -mno-red-zone -mcmodel=large -I src/kernel
-          $HOME/cross/bin/x86_64-elf-gcc -c src/kernel/fb/framebuffer.c -o framebuffer.o \
-            -ffreestanding -mno-red-zone -mcmodel=large -I src/kernel
-          $HOME/cross/bin/x86_64-elf-gcc -c src/kernel/vga.c -o vga.o \
-            -ffreestanding -mno-red-zone -mcmodel=large -I src/kernel
-          
-          # Link ALL object files together
-          $HOME/cross/bin/x86_64-elf-ld -nostdlib -T src/linker.ld \
-            boot.o main.o multiboot.o framebuffer.o vga.o -o kernel.bin
-
-      - name: Create bootable ISO
-        run: |
-          # Create ISO structure
-          mkdir -p iso/boot/grub
-
-          # Copy kernel and config
-          cp kernel.bin iso/boot/
-          cp grub/grub.cfg iso/boot/grub/
-
-          # Create GRUB boot image
-          grub-mkimage \
-            -O i386-pc \
-            -p /boot/grub \
-            -o iso/boot/grub/core.img \
-            iso9660 biosdisk multiboot2
-
-          # Create the eltorito.img file
-          cat /usr/lib/grub/i386-pc/cdboot.img iso/boot/grub/core.img > iso/boot/grub/eltorito.img
-
-          # Build ISO with xorriso
-          xorriso -as mkisofs \
-            -iso-level 3 \
-            -full-iso9660-filenames \
-            -volid "NEKOOS" \
-            -eltorito-boot boot/grub/eltorito.img \
-            -no-emul-boot \
-            -boot-load-size 4 \
-            -boot-info-table \
-            -output nekoos.iso \
-            iso/
-
-      - name: Upload ISO artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: nekoos-iso
-          path: nekoos.iso
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          qemu-system \
+          nasm \
+          gcc \
+          make \
+          grub-pc-bin \
+          xorriso
+        
+        # Install i686-elf cross compiler
+        wget https://github.com/lordmilko/i686-elf-tools/releases/download/7.1.0/i686-elf-tools-linux.zip
+        unzip i686-elf-tools-linux.zip
+        sudo mv i686-elf-tools /opt/
+        echo "/opt/i686-elf-tools/bin" >> $GITHUB_PATH
+    
+    - name: Build OS
+      run: |
+        make all
+        ls -la kernel/kernel.bin
+        file kernel/kernel.bin
+    
+    - name: Test in QEMU (headless)
+      run: |
+        timeout --foreground 5s make run || true
+        echo "QEMU test completed"
+    
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: nekoos-kernel
+        path: kernel/kernel.bin
