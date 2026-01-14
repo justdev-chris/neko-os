@@ -38,7 +38,7 @@ jobs:
         echo "QEMU test completed"
     
     - name: Upload artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: nekoos-kernel
         path: kernel/kernel.bin
