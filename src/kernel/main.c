@@ -1,22 +1,32 @@
-#include "multiboot.h"
-#include "fb/framebuffer.h"
+void kernel_main(void);
 
-void kernel_main(uint32_t magic, uint32_t mb_info_addr) {
-    // Parse multiboot tags to get framebuffer info
-    parse_multiboot_tags(mb_info_addr);
+void kernel_main(void) {
+    // Clear screen
+    char* video_memory = (char*) 0xB8000;
+    for (int i = 0; i < 80 * 25 * 2; i += 2) {
+        video_memory[i] = ' ';
+        video_memory[i+1] = 0x07; // Gray on black
+    }
     
-    // Initialize framebuffer
-    fb_init(fb_addr, fb_width, fb_height, fb_pitch);
+    // Print welcome message
+    const char* welcome = "NekoOS v0.1";
+    char* vga = (char*) 0xB8000;
     
-    // Clear to dark blue
-    fb_clear(30, 30, 50);
+    for (int i = 0; welcome[i] != '\0'; i++) {
+        vga[i*2] = welcome[i];
+        vga[i*2 + 1] = 0x0F; // White on black
+    }
     
-    // Draw a red rectangle
-    fb_draw_rect(100, 100, 200, 100, 255, 0, 0);
+    // Print status
+    vga = (char*) 0xB8000 + 160; // Second line
+    const char* status = "Kernel loaded successfully!";
+    for (int i = 0; status[i] != '\0'; i++) {
+        vga[i*2] = status[i];
+        vga[i*2 + 1] = 0x0A; // Green on black
+    }
     
-    // Draw a green rectangle
-    fb_draw_rect(400, 200, 150, 150, 0, 255, 0);
-    
-    // Hang forever
-    while(1);
+    // Hang
+    while (1) {
+        asm volatile ("hlt");
+    }
 }
