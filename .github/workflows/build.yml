@@ -1,4 +1,4 @@
-name: Build and Test NekoOS
+name: Build NekoOS
 on: [push, pull_request]
 
 jobs:
@@ -6,8 +6,7 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Install dependencies
       run: |
@@ -19,26 +18,26 @@ jobs:
           make \
           grub-pc-bin \
           xorriso
-        
-        # Install i686-elf cross compiler
         wget https://github.com/lordmilko/i686-elf-tools/releases/download/7.1.0/i686-elf-tools-linux.zip
         unzip i686-elf-tools-linux.zip
         sudo mv i686-elf-tools /opt/
         echo "/opt/i686-elf-tools/bin" >> $GITHUB_PATH
     
-    - name: Build OS
-      run: |
-        make all
-        ls -la kernel/kernel.bin
-        file kernel/kernel.bin
+    - name: Build kernel
+      run: make all
     
-    - name: Test in QEMU (headless)
-      run: |
-        timeout --foreground 5s make run || true
-        echo "QEMU test completed"
+    - name: Build ISO
+      run: make iso
     
-    - name: Upload artifact
+    - name: Test in QEMU
+      run: |
+        timeout --foreground 10s make run-iso || true
+    
+    - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: nekoos-kernel
-        path: kernel/kernel.bin
+        name: nekoos-build
+        path: |
+          kernel/kernel.bin
+          nekoos.iso
+        retention-days: 7
