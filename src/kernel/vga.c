@@ -1,4 +1,5 @@
 #include "vga.h"
+#include "io.h"
 
 volatile uint16_t* vga_buffer = (uint16_t*)0xB8000;
 int vga_width = 80;
@@ -6,6 +7,13 @@ int vga_height = 25;
 int cursor_x = 0;
 int cursor_y = 0;
 uint8_t vga_color = 0x0F;
+
+void vga_init(void) {
+    vga_clear();
+    // Disable cursor (optional)
+    outb(0x3D4, 0x0A);
+    outb(0x3D5, 0x20);
+}
 
 void vga_set_color(uint8_t color) {
     vga_color = color;
@@ -75,11 +83,4 @@ void vga_puts(const char* str) {
     while (*str) {
         vga_putchar(*str++);
     }
-}
-
-void vga_init(void) {
-    vga_clear();
-    // Disable cursor (optional)
-    outb(0x3D4, 0x0A);
-    outb(0x3D5, 0x20);
 }
