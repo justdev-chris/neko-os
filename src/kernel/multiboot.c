@@ -5,7 +5,6 @@ uint32_t fb_width = 0, fb_height = 0, fb_pitch = 0;
 
 void parse_multiboot_tags(uint32_t addr) {
     struct multiboot_tag *tag;
-    uint32_t size = *(uint32_t*)addr;
     
     for (tag = (struct multiboot_tag*)(addr + 8);
          tag->type != 0;
