@@ -56,17 +56,18 @@ void terminal_execute_command(void) {
     if (strcmp(input_buffer, "help") == 0) {
         terminal_setcolor(0x0A);
         terminal_writestring("Available commands:\n");
-        terminal_writestring("  help     - Show this help\n");
-        terminal_writestring("  clear    - Clear screen\n");
-        terminal_writestring("  neko     - Display cat\n");
-        terminal_writestring("  echo     - Echo text\n");
-        terminal_writestring("  reboot   - Reboot system\n");
-        terminal_writestring("  color    - Change text color\n");
+        terminal_writestring("  help       - Show this help\n");
+        terminal_writestring("  clear      - Clear screen\n");
+        terminal_writestring("  neko       - Display cat\n");
+        terminal_writestring("  neko game  - Play cat game\n");
+        terminal_writestring("  echo       - Echo text\n");
+        terminal_writestring("  reboot     - Reboot system\n");
+        terminal_writestring("  color      - Change text color\n");
     } 
     else if (strcmp(input_buffer, "clear") == 0) {
         terminal_clear();
         terminal_setcolor(0x0E);
-        terminal_writestring("NekoOS Terminal v0.1\n");
+        terminal_writestring("NekoOS Terminal v0.1.3\n");
         terminal_writestring("Type 'help' for commands\n");
     }
     else if (strcmp(input_buffer, "neko") == 0) {
@@ -75,6 +76,9 @@ void terminal_execute_command(void) {
         terminal_writestring("  ( o.o )\n");
         terminal_writestring("   > ^ <\n");
         terminal_writestring(" Neko~ desu!\n");
+    }
+    else if (strcmp(input_buffer, "neko game") == 0) {
+        run_neko_game();
     }
     else if (strncmp(input_buffer, "echo ", 5) == 0) {
         terminal_setcolor(0x0B);
@@ -101,10 +105,6 @@ void terminal_execute_command(void) {
         terminal_writestring("Command not found: ");
         terminal_writestring(input_buffer);
         terminal_writestring("\n");
-    }
-    else if (strcmp(input_buffer, "neko game") == 0) {
-    run_neko_game();
-    terminal_print_prompt();
     }
 }
 
@@ -141,7 +141,7 @@ void terminal_run_shell(void) {
     }
 }
 
-// ============= STRING FUNCTIONS (NO LIBC AVAILABLE) =============
+// ============= STRING FUNCTIONS =============
 
 size_t strlen(const char* str) {
     size_t len = 0;
@@ -169,17 +169,13 @@ int strncmp(const char* s1, const char* s2, size_t n) {
 
 void* memset(void* ptr, int value, size_t num) {
     unsigned char* p = ptr;
-    while (num--) {
-        *p++ = value;
-    }
+    while (num--) *p++ = value;
     return ptr;
 }
 
 void* memcpy(void* dest, const void* src, size_t n) {
     unsigned char* d = dest;
     const unsigned char* s = src;
-    while (n--) {
-        *d++ = *s++;
-    }
+    while (n--) *d++ = *s++;
     return dest;
 }
