@@ -86,21 +86,6 @@ int detect_gui(struct multiboot_info* mb) {
     return 0;
 }
 
-void run_gui(struct multiboot_info* mb) {
-    vga_set_color(0x0B);
-    vga_puts("GUI mode detected\n");
-    
-    fb_init(mb->framebuffer_addr,
-            mb->framebuffer_width,
-            mb->framebuffer_height,
-            mb->framebuffer_bpp,
-            mb->framebuffer_pitch);
-    
-    vga_puts("GUI loaded\n");
-    keyboard_init();
-    terminal_run_shell();
-}
-
 void run_text(void) {
     vga_set_color(0x0F);
     vga_puts("Text mode\n\n");
