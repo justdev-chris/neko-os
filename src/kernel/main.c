@@ -60,43 +60,28 @@ void print_banner(void) {
     vga_puts(" |_| \\_|\\___|_|\\_\\ \\___/|____/\n\n");
     
     vga_set_color(0x0F);
-    vga_puts("NekoOS v0.1.4\n\n");
-    
-    vga_set_color(0x0A);
-    vga_puts("[OK] VGA text mode\n");
-    vga_puts("[OK] Keyboard driver\n");
-    vga_puts("[OK] Terminal shell\n");
-    vga_puts("[TEST] GUI framework\n");
-    vga_puts("[OK] Neko game\n\n");
+    vga_puts("NekoOS v0.1.4 - GUI Test Build\n\n");
 }
 
 int detect_gui(struct multiboot_info* mb) {
-    if (mb->flags & (1 << 12)) {
-        vga_set_color(0x0D);
-        vga_puts("DEBUG: Framebuffer flag SET\n");
-        vga_puts("Type: ");
-        // Print framebuffer type
-        if (mb->framebuffer_type == 1) {
-            vga_puts("RGB\n");
-            return 1;
-        } else {
-            vga_puts("Unknown (");
-            // Print type number
-            vga_puts(")\n");
-        }
-    } else {
-        vga_set_color(0x0C);
-        vga_puts("DEBUG: No framebuffer flag\n");
-    }
-    return 0;
+    return (mb->flags & (1 << 12)) && (mb->framebuffer_type == 1);
+}
+
+void print_fb_info(struct multiboot_info* mb) {
+    vga_set_color(0x0B);
+    vga_puts("\nFramebuffer Info:\n");
+    vga_puts("  Width: "); vga_puts(mb->framebuffer_width); vga_puts("\n");
+    vga_puts("  Height: "); vga_puts(mb->framebuffer_height); vga_puts("\n");
+    vga_puts("  BPP: "); vga_puts(mb->framebuffer_bpp); vga_puts("\n");
+    vga_puts("  Pitch: "); vga_puts(mb->framebuffer_pitch); vga_puts(" bytes\n");
+    vga_puts("  Type: "); vga_puts(mb->framebuffer_type == 1 ? "RGB" : "Unknown"); vga_puts("\n");
 }
 
 void run_text_mode(void) {
     gui_mode = 0;
     vga_set_color(0x0F);
     vga_puts("\n=== TEXT MODE ===\n");
-    vga_puts("Type 'help' for commands\n");
-    vga_puts("Type 'gui' to switch modes\n\n");
+    vga_puts("Type 'help' for commands\n\n");
     
     keyboard_init();
     terminal_run_shell();
@@ -105,48 +90,48 @@ void run_text_mode(void) {
 void run_gui_mode(struct multiboot_info* mb) {
     gui_mode = 1;
     
-    vga_set_color(0x0B);
-    vga_puts("\nInitializing GUI...\n");
+    vga_set_color(0x0A);
+    vga_puts("\n=== STARTING GUI ===\n");
+    print_fb_info(mb);
+    vga_puts("Initializing framebuffer...\n");
     
-    // Initialize framebuffer
     fb_init(mb->framebuffer_addr,
             mb->framebuffer_width,
             mb->framebuffer_height,
             mb->framebuffer_bpp,
             mb->framebuffer_pitch);
     
-    vga_puts("Starting GUI desktop...\n");
+    vga_puts("Starting GUI...\n");
+    vga_puts("(Screen should change to colored quadrants)\n");
+    
     gui_run();
     
     // Should not return
     vga_set_color(0x0C);
-    vga_puts("ERROR: gui_run() returned!\n");
+    vga_puts("ERROR: Returned from GUI!\n");
 }
 
 void kernel_main(uint32_t magic, uint32_t mb_info_addr) {
     vga_init();
     print_banner();
     
-    vga_set_color(0x0D);
-    vga_puts("Magic: 0x");
-    // Print magic
-    vga_puts(magic == 0x2BADB002 ? "2BADB002 (Multiboot)\n" : "Unknown\n");
-    
     if (magic == 0x2BADB002) {
         struct multiboot_info* mb = (struct multiboot_info*)mb_info_addr;
         
-        vga_puts("Flags: 0x");
-        // Print flags
-        vga_puts("\n");
+        vga_set_color(0x0D);
+        vga_puts("Multiboot detected\n");
+        vga_puts("Flags: 0x"); // Would print hex
         
         if (detect_gui(mb)) {
             run_gui_mode(mb);
         } else {
-            vga_puts("No GUI support\n");
+            vga_set_color(0x0E);
+            vga_puts("No framebuffer available\n");
             run_text_mode();
         }
     } else {
-        vga_puts("Not Multiboot\n");
+        vga_set_color(0x0C);
+        vga_puts("Not Multiboot - Limited features\n");
         run_text_mode();
     }
     
