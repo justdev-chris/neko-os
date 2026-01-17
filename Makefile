@@ -13,8 +13,7 @@ KERNEL_SRCS = \
 	$(SRC_DIR)/terminal/terminal.c \
 	$(SRC_DIR)/keyboard/keyboard.c \
 	$(SRC_DIR)/game/game.c \
-	$(SRC_DIR)/gui/framebuffer.c \
-	$(SRC_DIR)/gui/desktop.c
+	$(SRC_DIR)/game/snake.c
 
 BOOT_SRCS = \
 	src/boot/multiboot.asm \
@@ -31,8 +30,7 @@ CFLAGS = -m32 -ffreestanding -nostdlib -Wall -Wextra -O2 \
          -I./src/kernel \
          -I./src/kernel/terminal \
          -I./src/kernel/keyboard \
-         -I./src/kernel/game \
-         -I./src/kernel/gui
+         -I./src/kernel/game
 
 ASFLAGS = -f elf32
 LDFLAGS = -m elf_i386 -T linker.ld -nostdlib
