@@ -18,7 +18,10 @@ jobs:
           gcc-multilib \
           make \
           grub-pc-bin \
-          xorriso
+          grub-common \
+          grub2-common \
+          xorriso \
+          mtools
     
     - name: Create linker script
       run: |
@@ -56,6 +59,11 @@ jobs:
       run: |
         # Remove duplicate -m32 flags if any
         sed -i 's/-m32 -m32/-m32/g' Makefile
+    
+    - name: Fix ISO script
+      run: |
+        # Update path in make-iso.sh
+        sed -i 's|kernel/kernel.bin|build/kernel.bin|g' scripts/make-iso.sh
     
     - name: Build
       run: |
