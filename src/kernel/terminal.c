@@ -1,7 +1,8 @@
 #include "terminal.h"
 #include "vga.h"
 #include "keyboard.h"
-#include <stddef.h>
+#include "io.h"
+#include <string.h>    
 
 #define MAX_INPUT 256
 
