@@ -14,7 +14,7 @@ void print_banner(void) {
     vga_puts(" |_| \\_|\\___|_|\\_\\ \\___/|____/\n\n");
     
     vga_set_color(0x0F); // White
-    vga_puts("NekoOS v0.1.2 - Kernel loaded successfully!\n\n");
+    vga_puts("NekoOS v0.1.3 - Kernel loaded successfully!\n\n");
     
     vga_set_color(0x0A); // Green
     vga_puts("[OK] Memory manager\n");
@@ -22,6 +22,8 @@ void print_banner(void) {
     vga_puts("[OK] Interrupt handler\n");
     vga_puts("[OK] PS/2 Keyboard driver\n");
     vga_puts("[OK] Terminal shell\n\n");
+    vga_puts("Updates to v0.1.3, 
+        New Game! neko game to play! \n\n");
 }
 
 void kernel_main(void) {
