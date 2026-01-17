@@ -12,17 +12,54 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y \
-        qemu-system \
-        nasm \
-        gcc \
-        gcc-multilib \
-        make \
-        grub-pc-bin \
-        xorriso
+          qemu-system \
+          nasm \
+          gcc \
+          gcc-multilib \
+          make \
+          grub-pc-bin \
+          xorriso
     
-    - name: Build kernel (32-bit)
+    - name: Create linker script
       run: |
-        # Use regular gcc with -m32 flag
+        cat > linker.ld << 'EOF'
+        OUTPUT_FORMAT(elf32-i386)
+        ENTRY(kernel_main)
+        
+        SECTIONS {
+          . = 1M;
+          
+          .multiboot : {
+            *(.multiboot)
+          }
+          
+          .text : ALIGN(4K) {
+            *(.text)
+          }
+          
+          .rodata : ALIGN(4K) {
+            *(.rodata)
+          }
+          
+          .data : ALIGN(4K) {
+            *(.data)
+          }
+          
+          .bss : ALIGN(4K) {
+            *(COMMON)
+            *(.bss)
+          }
+        }
+        EOF
+    
+    - name: Fix Makefile
+      run: |
+        # Remove duplicate -m32 flags if any
+        sed -i 's/-m32 -m32/-m32/g' Makefile
+    
+    - name: Build
+      run: |
+        make clean
         make all
     
     - name: Build ISO
@@ -30,13 +67,13 @@ jobs:
     
     - name: Test in QEMU
       run: |
-        timeout --foreground 10s make run-iso || true
+        timeout --foreground 10s make run || true
     
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
         name: nekoos-build
         path: |
-          kernel/kernel.bin
+          build/kernel.bin
           nekoos.iso
         retention-days: 7
