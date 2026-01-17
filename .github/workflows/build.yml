@@ -23,7 +23,7 @@ jobs:
     - name: Build kernel (32-bit)
       run: |
         # Use regular gcc with -m32 flag
-        make CC="gcc -m32" all
+        make all
     
     - name: Build ISO
       run: make iso
