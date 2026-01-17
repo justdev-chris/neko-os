@@ -6,32 +6,21 @@
 #include "gui/desktop.h"
 #include <stdint.h>
 
-// ==================== GLOBAL STATE ====================
-static int gui_mode = 0;  // 0 = text, 1 = GUI
+int gui_mode = 0;
 
-// ==================== CHANGELOG ====================
 void show_changelog(void) {
     vga_set_color(0x0E);
     vga_puts("\nNekoOS v0.1.4\n");
     vga_puts("-------------\n");
     vga_set_color(0x0F);
-    vga_puts("- Added GUI framework\n");
+    vga_puts("- GUI framework (testing)\n");
     vga_puts("- Fixed folder structure\n");
     vga_puts("- Fixed Multiboot header\n");
-    vga_puts("- Added terminal commands\n");
-    vga_puts("- Added keyboard driver\n");
-    vga_puts("- Added VGA text mode\n");
+    vga_puts("- Terminal with commands\n");
+    vga_puts("- Keyboard driver\n");
+    vga_puts("- VGA text mode\n");
 }
 
-// ==================== VERSION ====================
-void show_version(void) {
-    vga_set_color(0x0E);
-    vga_puts("\nNekoOS v0.1.4\n");
-    vga_set_color(0x0F);
-    vga_puts("Type 'help' for commands\n");
-}
-
-// ==================== MULTIBOOT STRUCT ====================
 struct multiboot_info {
     uint32_t flags;
     uint32_t mem_lower;
@@ -62,7 +51,6 @@ struct multiboot_info {
     uint8_t reserved;
 } __attribute__((packed));
 
-// ==================== BANNER ====================
 void print_banner(void) {
     vga_set_color(0x0E);
     vga_puts("  _   _      _      ___   ____\n");
@@ -78,32 +66,47 @@ void print_banner(void) {
     vga_puts("[OK] VGA text mode\n");
     vga_puts("[OK] Keyboard driver\n");
     vga_puts("[OK] Terminal shell\n");
-    vga_puts("[..] GUI framework\n");
+    vga_puts("[TEST] GUI framework\n");
     vga_puts("[OK] Neko game\n\n");
 }
 
-// ==================== GUI DETECTION ====================
 int detect_gui(struct multiboot_info* mb) {
     if (mb->flags & (1 << 12)) {
+        vga_set_color(0x0D);
+        vga_puts("DEBUG: Framebuffer flag SET\n");
+        vga_puts("Type: ");
+        // Print framebuffer type
         if (mb->framebuffer_type == 1) {
+            vga_puts("RGB\n");
             return 1;
+        } else {
+            vga_puts("Unknown (");
+            // Print type number
+            vga_puts(")\n");
         }
+    } else {
+        vga_set_color(0x0C);
+        vga_puts("DEBUG: No framebuffer flag\n");
     }
     return 0;
 }
 
-// ==================== TEXT MODE ====================
 void run_text_mode(void) {
     gui_mode = 0;
     vga_set_color(0x0F);
-    vga_puts("Text mode\n\n");
+    vga_puts("\n=== TEXT MODE ===\n");
+    vga_puts("Type 'help' for commands\n");
+    vga_puts("Type 'gui' to switch modes\n\n");
+    
     keyboard_init();
     terminal_run_shell();
 }
 
-// ==================== GUI MODE ====================
 void run_gui_mode(struct multiboot_info* mb) {
     gui_mode = 1;
+    
+    vga_set_color(0x0B);
+    vga_puts("\nInitializing GUI...\n");
     
     // Initialize framebuffer
     fb_init(mb->framebuffer_addr,
@@ -112,68 +115,40 @@ void run_gui_mode(struct multiboot_info* mb) {
             mb->framebuffer_bpp,
             mb->framebuffer_pitch);
     
-    // Start GUI
+    vga_puts("Starting GUI desktop...\n");
     gui_run();
     
-    // GUI event loop
-    keyboard_init();
-    while (gui_mode) {
-        // Check for 'g' key to switch back to text
-        char c = keyboard_getchar();
-        if (c == 'g' || c == 'G') {
-            // Switch back to text mode
-            gui_mode = 0;
-            
-            // Reinitialize VGA text mode
-            vga_init();
-            vga_set_color(0x0C);
-            vga_puts("\n\nSwitching to text mode...\n");
-            vga_set_color(0x0F);
-            vga_puts("Press any key to continue\n");
-            
-            // Wait for key
-            while (!keyboard_getchar());
-            
-            // Start terminal
-            terminal_run_shell();
-            return;
-        }
-        
-        // Continue GUI
-        // TODO: GUI update/rendering
-        
-        asm volatile ("hlt");
-    }
+    // Should not return
+    vga_set_color(0x0C);
+    vga_puts("ERROR: gui_run() returned!\n");
 }
 
-// ==================== KERNEL ENTRY ====================
 void kernel_main(uint32_t magic, uint32_t mb_info_addr) {
     vga_init();
     print_banner();
     
+    vga_set_color(0x0D);
+    vga_puts("Magic: 0x");
+    // Print magic
+    vga_puts(magic == 0x2BADB002 ? "2BADB002 (Multiboot)\n" : "Unknown\n");
+    
     if (magic == 0x2BADB002) {
         struct multiboot_info* mb = (struct multiboot_info*)mb_info_addr;
         
+        vga_puts("Flags: 0x");
+        // Print flags
+        vga_puts("\n");
+        
         if (detect_gui(mb)) {
-            vga_set_color(0x0B);
-            vga_puts("GUI mode available\n");
-            vga_puts("Starting GUI... (Press 'g' to switch to text)\n\n");
             run_gui_mode(mb);
         } else {
-            vga_set_color(0x0E);
-            vga_puts("No framebuffer detected\n");
-            vga_puts("Starting text mode...\n\n");
+            vga_puts("No GUI support\n");
             run_text_mode();
         }
     } else {
-        vga_set_color(0x0E);
-        vga_puts("Non-Multiboot boot\n");
-        vga_puts("Starting text mode...\n\n");
+        vga_puts("Not Multiboot\n");
         run_text_mode();
     }
     
-    // Should never reach here
-    while (1) {
-        asm volatile ("hlt");
-    }
+    while (1) asm("hlt");
 }
