@@ -1,38 +1,31 @@
-/* linker.ld - Linker script for NekoOS */
-OUTPUT_FORMAT(elf32-i386)
-ENTRY(kernel_main)
+# NekoOS Makefile
+# Line 1 MUST start with # or be empty
 
-SECTIONS {
-    /* Load kernel at 1MB (conventional for kernels) */
-    . = 1M;
-    
-    /* Multiboot header must be at the beginning */
-    .multiboot : {
-        *(.multiboot)
-    }
-    
-    /* Text section */
-    .text : ALIGN(4K) {
-        *(.text)
-    }
-    
-    /* Read-only data */
-    .rodata : ALIGN(4K) {
-        *(.rodata)
-    }
-    
-    /* Data section */
-    .data : ALIGN(4K) {
-        *(.data)
-    }
-    
-    /* BSS section (uninitialized data) */
-    .bss : ALIGN(4K) {
-        *(COMMON)
-        *(.bss)
-    }
-    
-    /* Ensure the end is aligned */
-    . = ALIGN(4K);
-    end = .;
-}
+CC = gcc
+AS = nasm
+LD = ld
+CFLAGS = -m32 -ffreestanding -nostdlib -Wall -Wextra
+ASFLAGS = -f elf32
+LDFLAGS = -m elf_i386 -T linker.ld
+
+all: nekoos.iso
+
+kernel.bin: build/kernel/main.o build/kernel/multiboot.o build/kernel/vga.o
+	$(LD) $(LDFLAGS) -o build/kernel.bin $^
+
+build/kernel/%.o: src/kernel/%.c
+	mkdir -p $(@D)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+iso: kernel.bin
+	bash scripts/make-iso.sh
+
+nekoos.iso: iso
+
+run: nekoos.iso
+	qemu-system-i386 -cdrom nekoos.iso
+
+clean:
+	rm -rf build nekoos.iso
+
+.PHONY: all clean run iso
