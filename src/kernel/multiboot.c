@@ -1,22 +1,39 @@
-#include "multiboot.h"
+// src/kernel/multiboot.c
+#include <stdint.h>
 
-uint64_t fb_addr = 0;
-uint32_t fb_width = 0, fb_height = 0, fb_pitch = 0;
+// Multiboot header must be in the first 8KB of the kernel
+__attribute__((section(".multiboot")))
+const uint32_t multiboot_header[] = {
+    // Magic number
+    0x1BADB002,
+    // Flags
+    0x00000003,  // ALIGN + MEMINFO
+    // Checksum
+    -(0x1BADB002 + 0x00000003),
+    // Header address
+    0x00000000,
+    // Load address  
+    0x00000000,
+    // Load end address
+    0x00000000,
+    // BSS end address
+    0x00000000,
+    // Entry address
+    0x00000000,
+    // Video mode
+    0x00000000,
+    // Width
+    0x00000000,
+    // Height
+    0x00000000,
+    // Depth
+    0x00000000
+};
 
+// Simple function to parse multiboot info (optional)
 void parse_multiboot_tags(uint32_t addr) {
-    struct multiboot_tag *tag;
-    
-    for (tag = (struct multiboot_tag*)(addr + 8);
-         tag->type != 0;
-         tag = (struct multiboot_tag*)((uint8_t*)tag + ((tag->size + 7) & ~7))) {
-        
-        if (tag->type == 8) { // Framebuffer tag
-            struct multiboot_tag_framebuffer *fb_tag = (struct multiboot_tag_framebuffer*)tag;
-            fb_addr = fb_tag->framebuffer_addr;
-            fb_width = fb_tag->framebuffer_width;
-            fb_height = fb_tag->framebuffer_height;
-            fb_pitch = fb_tag->framebuffer_pitch;
-            break;
-        }
-    }
+    // Your existing code here
+    uint32_t size = *(uint32_t*)addr;
+    (void)size;  // Mark as used to avoid warning
+    // ... rest of your code
 }
