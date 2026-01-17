@@ -3,10 +3,13 @@
 #include "terminal/terminal.h"
 #include "game/game.h"
 #include "gui/framebuffer.h"
-#include "gui/desktop.h"  // CHANGED FROM .c TO .h
+#include "gui/desktop.h"
 #include <stdint.h>
 
-// Changelog function
+// ==================== GLOBAL STATE ====================
+static int gui_mode = 0;  // 0 = text, 1 = GUI
+
+// ==================== CHANGELOG ====================
 void show_changelog(void) {
     vga_set_color(0x0E);
     vga_puts("\nNekoOS v0.1.4\n");
@@ -20,7 +23,7 @@ void show_changelog(void) {
     vga_puts("- Added VGA text mode\n");
 }
 
-// Version info
+// ==================== VERSION ====================
 void show_version(void) {
     vga_set_color(0x0E);
     vga_puts("\nNekoOS v0.1.4\n");
@@ -28,6 +31,7 @@ void show_version(void) {
     vga_puts("Type 'help' for commands\n");
 }
 
+// ==================== MULTIBOOT STRUCT ====================
 struct multiboot_info {
     uint32_t flags;
     uint32_t mem_lower;
@@ -58,6 +62,7 @@ struct multiboot_info {
     uint8_t reserved;
 } __attribute__((packed));
 
+// ==================== BANNER ====================
 void print_banner(void) {
     vga_set_color(0x0E);
     vga_puts("  _   _      _      ___   ____\n");
@@ -77,6 +82,7 @@ void print_banner(void) {
     vga_puts("[OK] Neko game\n\n");
 }
 
+// ==================== GUI DETECTION ====================
 int detect_gui(struct multiboot_info* mb) {
     if (mb->flags & (1 << 12)) {
         if (mb->framebuffer_type == 1) {
@@ -86,13 +92,61 @@ int detect_gui(struct multiboot_info* mb) {
     return 0;
 }
 
-void run_text(void) {
+// ==================== TEXT MODE ====================
+void run_text_mode(void) {
+    gui_mode = 0;
     vga_set_color(0x0F);
     vga_puts("Text mode\n\n");
     keyboard_init();
     terminal_run_shell();
 }
 
+// ==================== GUI MODE ====================
+void run_gui_mode(struct multiboot_info* mb) {
+    gui_mode = 1;
+    
+    // Initialize framebuffer
+    fb_init(mb->framebuffer_addr,
+            mb->framebuffer_width,
+            mb->framebuffer_height,
+            mb->framebuffer_bpp,
+            mb->framebuffer_pitch);
+    
+    // Start GUI
+    gui_run();
+    
+    // GUI event loop
+    keyboard_init();
+    while (gui_mode) {
+        // Check for 'g' key to switch back to text
+        char c = keyboard_getchar();
+        if (c == 'g' || c == 'G') {
+            // Switch back to text mode
+            gui_mode = 0;
+            
+            // Reinitialize VGA text mode
+            vga_init();
+            vga_set_color(0x0C);
+            vga_puts("\n\nSwitching to text mode...\n");
+            vga_set_color(0x0F);
+            vga_puts("Press any key to continue\n");
+            
+            // Wait for key
+            while (!keyboard_getchar());
+            
+            // Start terminal
+            terminal_run_shell();
+            return;
+        }
+        
+        // Continue GUI
+        // TODO: GUI update/rendering
+        
+        asm volatile ("hlt");
+    }
+}
+
+// ==================== KERNEL ENTRY ====================
 void kernel_main(uint32_t magic, uint32_t mb_info_addr) {
     vga_init();
     print_banner();
@@ -102,16 +156,24 @@ void kernel_main(uint32_t magic, uint32_t mb_info_addr) {
         
         if (detect_gui(mb)) {
             vga_set_color(0x0B);
-            vga_puts("GUI mode detected\n");
-            vga_puts("Falling back to terminal...\n\n");
-            keyboard_init();
-            terminal_run_shell();
+            vga_puts("GUI mode available\n");
+            vga_puts("Starting GUI... (Press 'g' to switch to text)\n\n");
+            run_gui_mode(mb);
         } else {
-            run_text();
+            vga_set_color(0x0E);
+            vga_puts("No framebuffer detected\n");
+            vga_puts("Starting text mode...\n\n");
+            run_text_mode();
         }
     } else {
-        run_text();
+        vga_set_color(0x0E);
+        vga_puts("Non-Multiboot boot\n");
+        vga_puts("Starting text mode...\n\n");
+        run_text_mode();
     }
     
-    while (1) asm("hlt");
+    // Should never reach here
+    while (1) {
+        asm volatile ("hlt");
+    }
 }
