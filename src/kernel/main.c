@@ -3,7 +3,7 @@
 #include "terminal/terminal.h"
 #include "game/game.h"
 #include "gui/framebuffer.h"
-#include "gui/desktop.c"
+#include "gui/desktop.h"  // CHANGED FROM .c TO .h
 #include <stdint.h>
 
 // Changelog function
@@ -101,7 +101,11 @@ void kernel_main(uint32_t magic, uint32_t mb_info_addr) {
         struct multiboot_info* mb = (struct multiboot_info*)mb_info_addr;
         
         if (detect_gui(mb)) {
-            run_gui(mb);
+            vga_set_color(0x0B);
+            vga_puts("GUI mode detected\n");
+            vga_puts("Falling back to terminal...\n\n");
+            keyboard_init();
+            terminal_run_shell();
         } else {
             run_text();
         }
