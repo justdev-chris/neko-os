@@ -1,12 +1,22 @@
-section .multiboot_header
-header_start:
-    dd 0xE85250D6                ; magic number (multiboot 2)
-    dd 0                         ; architecture 0 (i386)
-    dd header_end - header_start ; header length
-    dd 0x100000000 - (0xE85250D6 + 0 + (header_end - header_start)) ; checksum
+; multiboot.asm
+section .multiboot
+align 4
 
-    ; end tag
-    dw 0    ; type
-    dw 0    ; flags
-    dd 8    ; size
-header_end:
+; Multiboot header
+multiboot_header:
+    dd 0x1BADB002              ; magic
+    dd 0x00000003              ; flags
+    dd -(0x1BADB002 + 0x00000003) ; checksum
+    
+    ; Optional fields (set to 0 since we don't need them)
+    dd 0x00000000              ; header_addr
+    dd 0x00000000              ; load_addr  
+    dd 0x00000000              ; load_end_addr
+    dd 0x00000000              ; bss_end_addr
+    dd 0x00000000              ; entry_addr
+    
+    ; Video mode (0 = linear graphics)
+    dd 0x00000000              ; mode_type
+    dd 0x00000000              ; width
+    dd 0x00000000              ; height
+    dd 0x00000000              ; depth
