@@ -22,8 +22,7 @@ void print_banner(void) {
     vga_puts("[OK] Interrupt handler\n");
     vga_puts("[OK] PS/2 Keyboard driver\n");
     vga_puts("[OK] Terminal shell\n\n");
-    vga_puts("Updates to v0.1.3, 
-        New Game! neko game to play! \n\n");
+    vga_puts("Updates to v0.1.3, New Game! ''neko game'' to play! \n\n");
 }
 
 void kernel_main(void) {
