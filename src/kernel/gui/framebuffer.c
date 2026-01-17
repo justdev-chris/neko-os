@@ -18,59 +18,65 @@ void fb_init(uint32_t addr, uint32_t width, uint32_t height,
     fb.pitch = pitch;
 }
 
-// Convert RGB to BGR (framebuffer often uses BGR)
+// Convert RGB to BGR
 static uint32_t rgb_to_bgr(uint32_t rgb) {
-    return ((rgb & 0xFF) << 16) |        // R -> B
-           (rgb & 0xFF00) |              // G stays
-           ((rgb >> 16) & 0xFF);         // B -> R
+    return ((rgb & 0xFF) << 16) | (rgb & 0xFF00) | ((rgb >> 16) & 0xFF);
 }
 
 void fb_clear(uint32_t color) {
     uint32_t bgr_color = rgb_to_bgr(color);
+    uint32_t pixels_per_row = fb.pitch / 4;  // 4 bytes per pixel (32bpp)
     
     for (uint32_t y = 0; y < fb.height; y++) {
+        uint32_t* row = (uint32_t*)(fb.buffer + y * fb.pitch);
         for (uint32_t x = 0; x < fb.width; x++) {
-            uint32_t offset = y * fb.pitch + x * 4;
-            uint32_t* pixel = (uint32_t*)(fb.buffer + offset);
-            *pixel = bgr_color;
+            if (x < pixels_per_row) {
+                row[x] = bgr_color;
+            }
         }
     }
 }
 
 void fb_draw_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color) {
     uint32_t bgr_color = rgb_to_bgr(color);
+    uint32_t pixels_per_row = fb.pitch / 4;
     
-    // Top and bottom lines
-    for (uint32_t i = x; i < x + w; i++) {
-        uint32_t top_offset = y * fb.pitch + i * 4;
-        uint32_t* top_pixel = (uint32_t*)(fb.buffer + top_offset);
-        *top_pixel = bgr_color;
-        
-        uint32_t bottom_offset = (y + h - 1) * fb.pitch + i * 4;
-        uint32_t* bottom_pixel = (uint32_t*)(fb.buffer + bottom_offset);
-        *bottom_pixel = bgr_color;
+    // Top line
+    if (y < fb.height) {
+        uint32_t* top_row = (uint32_t*)(fb.buffer + y * fb.pitch);
+        for (uint32_t i = x; i < x + w && i < fb.width && i < pixels_per_row; i++) {
+            top_row[i] = bgr_color;
+        }
+    }
+    
+    // Bottom line
+    if (y + h - 1 < fb.height) {
+        uint32_t* bottom_row = (uint32_t*)(fb.buffer + (y + h - 1) * fb.pitch);
+        for (uint32_t i = x; i < x + w && i < fb.width && i < pixels_per_row; i++) {
+            bottom_row[i] = bgr_color;
+        }
     }
     
     // Left and right lines
-    for (uint32_t i = y; i < y + h; i++) {
-        uint32_t left_offset = i * fb.pitch + x * 4;
-        uint32_t* left_pixel = (uint32_t*)(fb.buffer + left_offset);
-        *left_pixel = bgr_color;
-        
-        uint32_t right_offset = i * fb.pitch + (x + w - 1) * 4;
-        uint32_t* right_pixel = (uint32_t*)(fb.buffer + right_offset);
-        *right_pixel = bgr_color;
+    for (uint32_t i = y; i < y + h && i < fb.height; i++) {
+        uint32_t* row = (uint32_t*)(fb.buffer + i * fb.pitch);
+        if (x < fb.width && x < pixels_per_row) {
+            row[x] = bgr_color;
+        }
+        if (x + w - 1 < fb.width && x + w - 1 < pixels_per_row) {
+            row[x + w - 1] = bgr_color;
+        }
     }
 }
 
 void fb_fill_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color) {
     uint32_t bgr_color = rgb_to_bgr(color);
+    uint32_t pixels_per_row = fb.pitch / 4;
     
-    for (uint32_t py = y; py < y + h; py++) {
-        for (uint32_t px = x; px < x + w; px++) {
-            uint32_t offset = py * fb.pitch + px * 4;
-            uint32_t* pixel = (uint32_t*)(fb.buffer + offset);
-            *pixel = bgr_color;
+    for (uint32_t py = y; py < y + h && py < fb.height; py++) {
+        uint32_t* row = (uint32_t*)(fb.buffer + py * fb.pitch);
+        for (uint32_t px = x; px < x + w && px < fb.width && px < pixels_per_row; px++) {
+            row[px] = bgr_color;
         }
     }
 }
