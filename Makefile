@@ -1,6 +1,6 @@
 all: build/kernel.bin nekoos.iso
 
-build/kernel.bin: src/kernel/main.o src/kernel/vga.o src/kernel/keyboard.o src/kernel/terminal.o src/boot/multiboot.o src/kernel/io.o
+build/kernel.bin: src/kernel/main.o src/kernel/vga.o src/kernel/keyboard.o src/kernel/terminal.o src/kernel/game.o src/boot/multiboot.o src/kernel/io.o
 	@mkdir -p build
 	ld -m elf_i386 -T linker.ld -nostdlib -o $@ $^
 
