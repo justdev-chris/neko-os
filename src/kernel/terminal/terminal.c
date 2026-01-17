@@ -50,6 +50,7 @@ void terminal_execute_command(void) {
         terminal_writestring("  help    - Show this help\n");
         terminal_writestring("  clear   - Clear screen\n");
         terminal_writestring("  snake   - Play Snake game\n");
+        terminal_writestring("  neko game  - Play neko game\n");
         terminal_writestring("  neko    - Display cat\n");
         terminal_writestring("  reboot  - Reboot system\n");
     } 
