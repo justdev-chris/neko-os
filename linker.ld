@@ -1,9 +1,11 @@
 OUTPUT_FORMAT(elf32-i386)
-ENTRY(kernel_main)
+ENTRY(_start)
 
 SECTIONS {
-    . = 1M;
+    /* Kernel loaded at 1MB */
+    . = 0x00100000;
     
+    /* MULTIBOOT HEADER MUST BE FIRST! */
     .multiboot : {
         *(.multiboot)
     }
@@ -23,5 +25,11 @@ SECTIONS {
     .bss : ALIGN(4K) {
         *(COMMON)
         *(.bss)
+        *(.bootstrap_stack)
+    }
+    
+    /DISCARD/ : {
+        *(.comment)
+        *(.eh_frame)
     }
 }
