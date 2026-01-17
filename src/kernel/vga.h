@@ -34,10 +34,12 @@ static inline uint16_t vga_entry(unsigned char uc, uint8_t color) {
     return (uint16_t) uc | (uint16_t) color << 8;
 }
 
-void terminal_initialize(void);
-void terminal_setcolor(uint8_t color);
-void terminal_putchar(char c);
-void terminal_writestring(const char* data);
-void terminal_scroll(void);
+// THESE ARE THE FUNCTIONS YOUR CODE ACTUALLY USES:
+void vga_init(void);                    // NOT terminal_initialize
+void vga_clear(void);
+void vga_putchar(char c);
+void vga_puts(const char* data);        // NOT terminal_writestring
+void vga_set_color(uint8_t color);      // NOT terminal_setcolor
+void vga_scroll(void);                  // NOT terminal_scroll
 
 #endif
