@@ -2,7 +2,9 @@
 set -e
 
 mkdir -p isodir/boot/grub
-cp kernel/kernel.bin isodir/boot/nekoos.bin
+
+# Use build/kernel.bin instead of kernel/kernel.bin
+cp build/kernel.bin isodir/boot/nekoos.bin
 
 cat > isodir/boot/grub/grub.cfg << EOF
 set timeout=5
