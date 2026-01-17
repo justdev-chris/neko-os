@@ -1,5 +1,5 @@
 #include "keyboard.h"
-#include ".../io.h"
+#include "io.h"
 
 // US QWERTY scancode set 1
 static const char kbd_us[128] = {
