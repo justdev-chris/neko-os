@@ -14,7 +14,7 @@ void print_banner(void) {
     vga_puts(" |_| \\_|\\___|_|\\_\\ \\___/|____/\n\n");
     
     vga_set_color(0x0F); // White
-    vga_puts("NekoOS v0.1.0 - Kernel loaded successfully!\n\n");
+    vga_puts("NekoOS v0.1.2 - Kernel loaded successfully!\n\n");
     
     vga_set_color(0x0A); // Green
     vga_puts("[OK] Memory manager\n");
