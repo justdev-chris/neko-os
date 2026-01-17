@@ -1,28 +1,67 @@
-all: build/kernel.bin nekoos.iso
+VERSION = 0.1.4
+CC = gcc
+AS = nasm
+LD = ld
 
-build/kernel.bin: src/kernel/main.o src/kernel/vga.o src/kernel/keyboard.o src/kernel/terminal.o src/kernel/game.o src/boot/multiboot.o src/kernel/io.o
-	@mkdir -p build
-	ld -m elf_i386 -T linker.ld -nostdlib -o $@ $^
+SRC_DIR = src/kernel
+BUILD_DIR = build
+ISO_DIR = isodir
 
-nekoos.iso: build/kernel.bin
-	mkdir -p isodir/boot/grub
-	cp build/kernel.bin isodir/boot/
-	cp grub/grub.cfg isodir/boot/grub/
-	grub-mkrescue -o $@ isodir
+KERNEL_SRCS = \
+	$(SRC_DIR)/main.c \
+	$(SRC_DIR)/vga.c \
+	$(SRC_DIR)/terminal/terminal.c \
+	$(SRC_DIR)/keyboard/keyboard.c \
+	$(SRC_DIR)/game/game.c \
+	$(SRC_DIR)/gui/framebuffer.c \
+	$(SRC_DIR)/gui/desktop.c
 
-# C files
-src/kernel/%.o: src/kernel/%.c
-	gcc -m32 -ffreestanding -nostdlib -Wall -Wextra -O2 -I./src/kernel -c $< -o $@
+BOOT_SRCS = \
+	src/boot/multiboot.asm \
+	$(SRC_DIR)/io.asm
 
-# ASM files
-src/boot/multiboot.o: src/boot/multiboot.asm
-	nasm -f elf32 $< -o $@
+C_OBJS = $(KERNEL_SRCS:.c=.o)
+ASM_OBJS = $(BOOT_SRCS:.asm=.o)
+ALL_OBJS = $(C_OBJS) $(ASM_OBJS)
 
-src/kernel/io.o: src/kernel/io.asm
-	nasm -f elf32 $< -o $@
+KERNEL_TARGET = $(BUILD_DIR)/kernel.bin
+ISO_TARGET = nekoos.iso
+
+CFLAGS = -m32 -ffreestanding -nostdlib -Wall -Wextra -O2 \
+         -I./src/kernel \
+         -I./src/kernel/terminal \
+         -I./src/kernel/keyboard \
+         -I./src/kernel/game \
+         -I./src/kernel/gui
+
+ASFLAGS = -f elf32
+LDFLAGS = -m elf_i386 -T linker.ld -nostdlib
+
+all: $(KERNEL_TARGET) $(ISO_TARGET)
+
+$(KERNEL_TARGET): $(ALL_OBJS)
+	@mkdir -p $(BUILD_DIR)
+	$(LD) $(LDFLAGS) -o $@ $^
+
+$(ISO_TARGET): $(KERNEL_TARGET) grub/grub.cfg
+	@mkdir -p $(ISO_DIR)/boot/grub
+	cp $(KERNEL_TARGET) $(ISO_DIR)/boot/
+	cp grub/grub.cfg $(ISO_DIR)/boot/grub/
+	grub-mkrescue -o $@ $(ISO_DIR)
+
+%.o: %.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+%.o: %.asm
+	@mkdir -p $(dir $@)
+	$(AS) $(ASFLAGS) $< -o $@
 
 clean:
-	rm -rf src/kernel/*.o src/boot/*.o build/kernel.bin nekoos.iso isodir
+	rm -rf $(ALL_OBJS) $(KERNEL_TARGET) $(ISO_TARGET) $(ISO_DIR)
 
-run: build/kernel.bin
-	qemu-system-i386 -kernel build/kernel.bin
+run: $(KERNEL_TARGET)
+	qemu-system-i386 -kernel $(KERNEL_TARGET)
+
+iso-run: $(ISO_TARGET)
+	qemu-system-i386 -cdrom $(ISO_TARGET)
