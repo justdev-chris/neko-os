@@ -1,41 +1,23 @@
-bits 32
-
-; ========== MULTIBOOT HEADER ==========
 section .multiboot
 align 4
+
 multiboot_header:
     dd 0x1BADB002              ; Magic number
-    dd 0x00000003              ; Flags: align 4K + memory map
-    dd -(0x1BADB002 + 0x00000003) ; Checksum
-
-; ========== ENTRY POINT ==========
-section .text
-global _start
-
-_start:
-    ; Set up stack
-    mov esp, stack_top
     
-    ; Push Multiboot info (ebx = info struct, eax = magic 0x2BADB002)
-    push ebx
-    push eax
+    ; FLAGS: bit 0 = align modules, bit 1 = memory map, bit 2 = framebuffer
+    dd 0x00000007              ; CHANGED FROM 0x00000003
     
-    ; Clear direction flag (for string operations)
-    cld
+    dd -(0x1BADB002 + 0x00000007) ; Updated checksum
     
-    ; Call kernel_main(magic, mb_info)
-    extern kernel_main
-    call kernel_main
+    ; Framebuffer request fields (must be set if bit 2 in flags is set)
+    dd 0                       ; header_addr
+    dd 0                       ; load_addr  
+    dd 0                       ; load_end_addr
+    dd 0                       ; bss_end_addr
+    dd 0                       ; entry_addr
     
-    ; Hang if kernel returns (shouldn't happen)
-    cli
-.hang:
-    hlt
-    jmp .hang
-
-; ========== STACK ==========
-section .bss
-align 16
-stack_bottom:
-    resb 16384  ; 16KB stack
-stack_top:
+    ; Framebuffer mode request
+    dd 0                       ; mode_type (0 = linear graphics)
+    dd 1024                    ; width
+    dd 768                     ; height
+    dd 32                      ; depth (bpp)
