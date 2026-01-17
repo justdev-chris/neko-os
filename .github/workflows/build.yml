@@ -11,26 +11,17 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install -y qemu-system nasm gcc gcc-multilib make grub-pc-bin xorriso
+        sudo apt install -y nasm gcc gcc-multilib make grub-pc-bin xorriso mtools
     
     - name: Build
       run: |
         make clean
         make
     
-    - name: Test kernel
-      run: |
-        timeout --foreground 5s make run || true
-    
-    - name: Test ISO
-      run: |
-        timeout --foreground 5s make iso-run || true
-    
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: nekoos-build
+        name: nekoos
         path: |
           build/kernel.bin
           nekoos.iso
-        retention-days: 7
