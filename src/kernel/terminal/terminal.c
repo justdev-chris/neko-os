@@ -2,6 +2,7 @@
 #include "../vga.h"
 #include "../keyboard/keyboard.h"
 #include "../game/snake.h"
+#include "../game/game.h"  // Your neko game header
 #include "../io.h"
 #include <stddef.h>
 #include <string.h>
@@ -47,12 +48,12 @@ void terminal_execute_command(void) {
     if (strcmp(input_buffer, "help") == 0) {
         terminal_setcolor(0x0A);
         terminal_writestring("Available commands:\n");
-        terminal_writestring("  help    - Show this help\n");
-        terminal_writestring("  clear   - Clear screen\n");
-        terminal_writestring("  snake   - Play Snake game\n");
-        terminal_writestring("  neko game  - Play neko game\n");
-        terminal_writestring("  neko    - Display cat\n");
-        terminal_writestring("  reboot  - Reboot system\n");
+        terminal_writestring("  help      - Show this help\n");
+        terminal_writestring("  clear     - Clear screen\n");
+        terminal_writestring("  snake     - Play Snake game\n");
+        terminal_writestring("  neko game - Play Neko game\n");
+        terminal_writestring("  neko      - Display cat\n");
+        terminal_writestring("  reboot    - Reboot system\n");
     } 
     else if (strcmp(input_buffer, "clear") == 0) {
         terminal_clear();
@@ -61,6 +62,11 @@ void terminal_execute_command(void) {
     }
     else if (strcmp(input_buffer, "snake") == 0) {
         snake_run();
+        terminal_clear();
+    }
+    else if (strcmp(input_buffer, "neko game") == 0) {
+        // Call your neko game function
+        run_neko_game();  // Your function name
         terminal_clear();
     }
     else if (strcmp(input_buffer, "neko") == 0) {
