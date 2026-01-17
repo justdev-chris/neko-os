@@ -1,8 +1,8 @@
 #include "terminal.h"
-#include "vga.h"
-#include "keyboard.h"
-#include "io.h"
-#include "game.h"
+#include ".../vga.h"
+#include ".../keyboard/keyboard.h"
+#include ".../io.h"
+#include ".../game/game.h"
 #include <string.h>
 
 #define MAX_INPUT 256
