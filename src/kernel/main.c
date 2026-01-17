@@ -1,6 +1,6 @@
 #include "vga.h"
-#include "terminal.h"
-#include "keyboard.h"
+#include "terminal/terminal.h"
+#include "keyboard/keyboard.h"
 #include "io.h"
 #include <stdint.h>
 
