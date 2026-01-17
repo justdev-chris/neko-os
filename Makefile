@@ -35,7 +35,7 @@ ALL_OBJS = $(C_OBJS) $(ASM_OBJS)
 # Targets
 KERNEL_TARGET = $(BUILD_DIR)/kernel.bin
 ISO_TARGET = nekoos.iso
-GRUB_CFG = src/boot/grub.cfg
+GRUB_CFG = grub/grub.cfg  # YOUR ACTUAL PATH
 
 # Main target builds both kernel and ISO
 all: $(KERNEL_TARGET) $(ISO_TARGET)
