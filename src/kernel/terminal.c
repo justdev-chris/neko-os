@@ -2,6 +2,7 @@
 #include "vga.h"
 #include "keyboard.h"
 #include "io.h"
+#include <string.h>
 
 #define MAX_INPUT 256
 
