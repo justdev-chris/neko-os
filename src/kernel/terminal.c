@@ -2,6 +2,7 @@
 #include "vga.h"
 #include "keyboard.h"
 #include "io.h"
+#include "game.h"
 #include <string.h>
 
 #define MAX_INPUT 256
@@ -100,6 +101,10 @@ void terminal_execute_command(void) {
         terminal_writestring("Command not found: ");
         terminal_writestring(input_buffer);
         terminal_writestring("\n");
+    }
+    else if (strcmp(input_buffer, "neko game") == 0) {
+    run_neko_game();
+    terminal_print_prompt();
     }
 }
 
