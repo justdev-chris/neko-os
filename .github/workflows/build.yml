@@ -11,90 +11,20 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install -y qemu-system nasm gcc gcc-multilib make grub-pc-bin grub-common xorriso mtools
-    
-    - name: Create basic files
-      run: |
-        mkdir -p src/boot src/kernel scripts
-        
-        # Create simple linker.ld
-        echo 'OUTPUT_FORMAT(elf32-i386)' > linker.ld
-        echo 'ENTRY(kernel_main)' >> linker.ld
-        echo '' >> linker.ld
-        echo 'SECTIONS {' >> linker.ld
-        echo '  . = 1M;' >> linker.ld
-        echo '  .multiboot : { *(.multiboot) }' >> linker.ld
-        echo '  .text : ALIGN(4K) { *(.text) }' >> linker.ld
-        echo '  .rodata : ALIGN(4K) { *(.rodata) }' >> linker.ld
-        echo '  .data : ALIGN(4K) { *(.data) }' >> linker.ld
-        echo '  .bss : ALIGN(4K) { *(COMMON) *(.bss) }' >> linker.ld
-        echo '}' >> linker.ld
-        
-        # Create simple make-iso.sh
-        echo '#!/bin/bash' > scripts/make-iso.sh
-        echo 'set -e' >> scripts/make-iso.sh
-        echo 'mkdir -p isodir/boot/grub' >> scripts/make-iso.sh
-        echo 'cp build/kernel.bin isodir/boot/nekoos.bin' >> scripts/make-iso.sh
-        echo 'cat > isodir/boot/grub/grub.cfg << EOF' >> scripts/make-iso.sh
-        echo 'set timeout=3' >> scripts/make-iso.sh
-        echo 'set default=0' >> scripts/make-iso.sh
-        echo 'menuentry "NekoOS" {' >> scripts/make-iso.sh
-        echo '  multiboot /boot/nekoos.bin' >> scripts/make-iso.sh
-        echo '  boot' >> scripts/make-iso.sh
-        echo '}' >> scripts/make-iso.sh
-        echo 'EOF' >> scripts/make-iso.sh
-        echo 'grub-mkrescue -o nekoos.iso isodir' >> scripts/make-iso.sh
-        chmod +x scripts/make-iso.sh
-        
-        # Create multiboot.asm
-        echo 'section .multiboot' > src/boot/multiboot.asm
-        echo 'align 4' >> src/boot/multiboot.asm
-        echo '' >> src/boot/multiboot.asm
-        echo 'multiboot_header:' >> src/boot/multiboot.asm
-        echo '  dd 0x1BADB002' >> src/boot/multiboot.asm
-        echo '  dd 0x00000003' >> src/boot/multiboot.asm
-        echo '  dd -(0x1BADB002 + 0x00000003)' >> src/boot/multiboot.asm
-        echo '  dd 0' >> src/boot/multiboot.asm
-        echo '  dd 0' >> src/boot/multiboot.asm
-        echo '  dd 0' >> src/boot/multiboot.asm
-        echo '  dd 0' >> src/boot/multiboot.asm
-        echo '  dd 0' >> src/boot/multiboot.asm
-        
-        # Create main.c if missing
-        if [ ! -f src/kernel/main.c ]; then
-          echo '#include <stdint.h>' > src/kernel/main.c
-          echo '' >> src/kernel/main.c
-          echo 'volatile uint16_t* vga_buffer = (uint16_t*)0xB8000;' >> src/kernel/main.c
-          echo '' >> src/kernel/main.c
-          echo 'void kernel_main(void) {' >> src/kernel/main.c
-          echo '  for (int i = 0; i < 80*25; i++) {' >> src/kernel/main.c
-          echo '    vga_buffer[i] = (0x0F << 8) | '"'"' '"'"';' >> src/kernel/main.c
-          echo '  }' >> src/kernel/main.c
-          echo '  const char* msg = "NekoOS!";' >> src/kernel/main.c
-          echo '  for (int i = 0; msg[i]; i++) {' >> src/kernel/main.c
-          echo '    vga_buffer[i] = (0x0A << 8) | msg[i];' >> src/kernel/main.c
-          echo '  }' >> src/kernel/main.c
-          echo '  while(1) asm("hlt");' >> src/kernel/main.c
-          echo '}' >> src/kernel/main.c
-        fi
-        
-        # Create other kernel files if missing
-        if [ ! -f src/kernel/multiboot.c ]; then
-          echo 'void parse_multiboot_tags(unsigned int addr) { (void)addr; }' > src/kernel/multiboot.c
-        fi
-        
-        if [ ! -f src/kernel/vga.c ]; then
-          echo '// VGA utilities' > src/kernel/vga.c
-        fi
+        sudo apt install -y qemu-system nasm gcc gcc-multilib make grub-pc-bin xorriso
     
     - name: Build
       run: |
         make clean
-        make all
+        make
     
-    - name: Test
+    - name: Test kernel
       run: |
         timeout --foreground 5s make run || true
+    
+    - name: Test ISO
+      run: |
+        timeout --foreground 5s make iso-run || true
     
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
