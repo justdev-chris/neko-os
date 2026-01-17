@@ -1,18 +1,22 @@
-// src/kernel/gui/desktop.c
 #include "framebuffer.h"
 #include "desktop.h"
 
 void gui_run(void) {
-    // Clear screen to dark gray
-    fb_clear(0xFF333333);
+    // Clear to blue (test color)
+    fb_clear(0xFF0000FF);  // Blue
     
-    // Draw a window
-    fb_draw_rect(100, 100, 400, 300, 0xFF0066CC);  // Blue border
+    // Draw red square in center
+    fb_fill_rect(400, 300, 200, 200, 0xFFFF0000);  // Red
     
-    // Draw title bar (filled rectangle - need fb_fill_rect)
-    // For now just outline
-    fb_draw_rect(100, 100, 400, 30, 0xFF0099FF);   // Title bar border
+    // Draw green border
+    fb_draw_rect(0, 0, 1024, 768, 0xFF00FF00);  // Green
     
-    // Draw some text placeholder (would need font rendering)
-    // TODO: Add text rendering
+    // Draw yellow "Neko" text placeholder
+    fb_fill_rect(500, 350, 100, 50, 0xFFFFFF00);  // Yellow
+    
+    // Should never return in real GUI
+    // For now, just stay here
+    while (1) {
+        // TODO: GUI event loop
+    }
 }
