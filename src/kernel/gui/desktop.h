@@ -1,6 +1,6 @@
 #ifndef DESKTOP_H
 #define DESKTOP_H
 
-// Empty for now
+void gui_run(void);
 
 #endif
