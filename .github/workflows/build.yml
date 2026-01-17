@@ -6,30 +6,30 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Install dependencies
-      run: |
-        sudo apt update
-        sudo apt install -y \
-          qemu-system \
-          nasm \
-          gcc \
-          gcc-multilib \
-          make \
-          grub-pc-bin \
-          grub-common \
-          xorriso \
-          mtools
-    
-    - name: Create missing files
-      run: |
-        # Create directories
-        mkdir -p src/boot src/kernel scripts
-        
-        # Create linker.ld if missing
-        if [ ! -f linker.ld ]; then
-          cat > linker.ld << 'EOF'
+      - uses: actions/checkout@v4
+      
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            qemu-system \
+            nasm \
+            gcc \
+            gcc-multilib \
+            make \
+            grub-pc-bin \
+            grub-common \
+            xorriso \
+            mtools
+      
+      - name: Create missing files
+        run: |
+          # Create directories
+          mkdir -p src/boot src/kernel scripts
+          
+          # Create linker.ld if missing
+          if [ ! -f linker.ld ]; then
+            cat > linker.ld << 'EOF'
 OUTPUT_FORMAT(elf32-i386)
 ENTRY(kernel_main)
 
@@ -58,11 +58,11 @@ SECTIONS {
   }
 }
 EOF
-        fi
-        
-        # Create make-iso.sh if missing
-        if [ ! -f scripts/make-iso.sh ]; then
-          cat > scripts/make-iso.sh << 'EOF'
+          fi
+          
+          # Create make-iso.sh if missing
+          if [ ! -f scripts/make-iso.sh ]; then
+            cat > scripts/make-iso.sh << 'EOF'
 #!/bin/bash
 set -e
 
@@ -86,12 +86,12 @@ grub-mkrescue -o nekoos.iso isodir 2>/dev/null || \
 
 echo "ISO created"
 EOF
-          chmod +x scripts/make-iso.sh
-        fi
-        
-        # Create src/boot/multiboot.asm if missing
-        if [ ! -f src/boot/multiboot.asm ]; then
-          cat > src/boot/multiboot.asm << 'EOF'
+            chmod +x scripts/make-iso.sh
+          fi
+          
+          # Create src/boot/multiboot.asm if missing
+          if [ ! -f src/boot/multiboot.asm ]; then
+            cat > src/boot/multiboot.asm << 'EOF'
 section .multiboot
 align 4
 
@@ -109,11 +109,11 @@ multiboot_header:
   dd 0x00000000
   dd 0x00000000
 EOF
-        fi
-        
-        # Create kernel files if missing
-        if [ ! -f src/kernel/main.c ]; then
-          cat > src/kernel/main.c << 'EOF'
+          fi
+          
+          # Create kernel files if missing
+          if [ ! -f src/kernel/main.c ]; then
+            cat > src/kernel/main.c << 'EOF'
 #include <stdint.h>
 
 volatile uint16_t* vga_buffer = (uint16_t*)0xB8000;
@@ -133,36 +133,36 @@ void kernel_main(void) {
   while(1) asm("hlt");
 }
 EOF
-        fi
-        
-        if [ ! -f src/kernel/multiboot.c ]; then
-          cat > src/kernel/multiboot.c << 'EOF'
+          fi
+          
+          if [ ! -f src/kernel/multiboot.c ]; then
+            cat > src/kernel/multiboot.c << 'EOF'
 void parse_multiboot_tags(unsigned int addr) {
   (void)addr;
 }
 EOF
-        fi
-        
-        if [ ! -f src/kernel/vga.c ]; then
-          cat > src/kernel/vga.c << 'EOF'
+          fi
+          
+          if [ ! -f src/kernel/vga.c ]; then
+            cat > src/kernel/vga.c << 'EOF'
 // VGA utilities placeholder
 EOF
-        fi
-    
-    - name: Build
-      run: |
-        make clean
-        make all
-    
-    - name: Test
-      run: |
-        timeout --foreground 5s make run || true
-    
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: nekoos-build
-        path: |
-          build/kernel.bin
-          nekoos.iso
-        retention-days: 7
+          fi
+      
+      - name: Build
+        run: |
+          make clean
+          make all
+      
+      - name: Test
+        run: |
+          timeout --foreground 5s make run || true
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nekoos-build
+          path: |
+            build/kernel.bin
+            nekoos.iso
+          retention-days: 7
