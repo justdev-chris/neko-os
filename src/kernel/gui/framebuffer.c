@@ -1,4 +1,3 @@
-// src/kernel/gui/framebuffer.c
 #include "framebuffer.h"
 #include <stdint.h>
 
@@ -19,42 +18,59 @@ void fb_init(uint32_t addr, uint32_t width, uint32_t height,
     fb.pitch = pitch;
 }
 
-// ADD THESE FUNCTIONS:
+// Convert RGB to BGR (framebuffer often uses BGR)
+static uint32_t rgb_to_bgr(uint32_t rgb) {
+    return ((rgb & 0xFF) << 16) |        // R -> B
+           (rgb & 0xFF00) |              // G stays
+           ((rgb >> 16) & 0xFF);         // B -> R
+}
+
 void fb_clear(uint32_t color) {
-    // Fill entire framebuffer with color
+    uint32_t bgr_color = rgb_to_bgr(color);
+    
     for (uint32_t y = 0; y < fb.height; y++) {
         for (uint32_t x = 0; x < fb.width; x++) {
-            // Calculate pixel position (simplified - assumes 32bpp)
             uint32_t offset = y * fb.pitch + x * 4;
             uint32_t* pixel = (uint32_t*)(fb.buffer + offset);
-            *pixel = color;
+            *pixel = bgr_color;
         }
     }
 }
 
 void fb_draw_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color) {
-    // Draw rectangle outline
+    uint32_t bgr_color = rgb_to_bgr(color);
+    
+    // Top and bottom lines
     for (uint32_t i = x; i < x + w; i++) {
-        // Top line
-        uint32_t offset_top = y * fb.pitch + i * 4;
-        uint32_t* pixel_top = (uint32_t*)(fb.buffer + offset_top);
-        *pixel_top = color;
+        uint32_t top_offset = y * fb.pitch + i * 4;
+        uint32_t* top_pixel = (uint32_t*)(fb.buffer + top_offset);
+        *top_pixel = bgr_color;
         
-        // Bottom line
-        uint32_t offset_bottom = (y + h - 1) * fb.pitch + i * 4;
-        uint32_t* pixel_bottom = (uint32_t*)(fb.buffer + offset_bottom);
-        *pixel_bottom = color;
+        uint32_t bottom_offset = (y + h - 1) * fb.pitch + i * 4;
+        uint32_t* bottom_pixel = (uint32_t*)(fb.buffer + bottom_offset);
+        *bottom_pixel = bgr_color;
     }
     
+    // Left and right lines
     for (uint32_t i = y; i < y + h; i++) {
-        // Left line
-        uint32_t offset_left = i * fb.pitch + x * 4;
-        uint32_t* pixel_left = (uint32_t*)(fb.buffer + offset_left);
-        *pixel_left = color;
+        uint32_t left_offset = i * fb.pitch + x * 4;
+        uint32_t* left_pixel = (uint32_t*)(fb.buffer + left_offset);
+        *left_pixel = bgr_color;
         
-        // Right line
-        uint32_t offset_right = i * fb.pitch + (x + w - 1) * 4;
-        uint32_t* pixel_right = (uint32_t*)(fb.buffer + offset_right);
-        *pixel_right = color;
+        uint32_t right_offset = i * fb.pitch + (x + w - 1) * 4;
+        uint32_t* right_pixel = (uint32_t*)(fb.buffer + right_offset);
+        *right_pixel = bgr_color;
+    }
+}
+
+void fb_fill_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color) {
+    uint32_t bgr_color = rgb_to_bgr(color);
+    
+    for (uint32_t py = y; py < y + h; py++) {
+        for (uint32_t px = x; px < x + w; px++) {
+            uint32_t offset = py * fb.pitch + px * 4;
+            uint32_t* pixel = (uint32_t*)(fb.buffer + offset);
+            *pixel = bgr_color;
+        }
     }
 }
