@@ -1,50 +1,61 @@
-# NekoOS Makefile
-AS = nasm
+# Compiler/linker
 CC = gcc
+AS = nasm
 LD = ld
-CFLAGS = -m32 -ffreestanding -nostdlib -Wall -Wextra -O2
-ASFLAGS = -f elf32
-LDFLAGS = -m elf_i386 -T linker.ld
 
+# Flags
+CFLAGS = -m32 -ffreestanding -nostdlib -Wall -Wextra -O2 -I./src/kernel
+ASFLAGS = -f elf32
+LDFLAGS = -m elf_i386 -T linker.ld -nostdlib
+
+# Directories
 SRC_DIR = src
+KERNEL_DIR = $(SRC_DIR)/kernel
+BOOT_DIR = $(SRC_DIR)/boot
 BUILD_DIR = build
 
-KERNEL_OBJS = \
-	$(BUILD_DIR)/boot/multiboot.o \
-	$(BUILD_DIR)/kernel/main.o \
-	$(BUILD_DIR)/kernel/multiboot.o \
-	$(BUILD_DIR)/kernel/vga.o
+# Source files (ADD ALL YOUR FILES HERE)
+C_SOURCES = \
+	$(KERNEL_DIR)/main.c \
+	$(KERNEL_DIR)/vga.c \
+	$(KERNEL_DIR)/keyboard.c \
+	$(KERNEL_DIR)/terminal.c \
+	$(KERNEL_DIR)/multiboot.c
 
-.PHONY: all clean run debug
+ASM_SOURCES = \
+	$(BOOT_DIR)/multiboot.asm \
+	$(KERNEL_DIR)/io.asm
 
-all: nekoos.iso
+# Object files
+C_OBJS = $(C_SOURCES:%.c=$(BUILD_DIR)/%.o)
+ASM_OBJS = $(ASM_SOURCES:%.asm=$(BUILD_DIR)/%.o)
+ALL_OBJS = $(C_OBJS) $(ASM_OBJS)
 
-kernel.bin: $(KERNEL_OBJS)
-	$(LD) $(LDFLAGS) -o $(BUILD_DIR)/kernel.bin $^
-	@echo "Kernel built: $(BUILD_DIR)/kernel.bin"
+# Target
+TARGET = $(BUILD_DIR)/kernel.bin
 
-$(BUILD_DIR)/boot/%.o: $(SRC_DIR)/boot/%.asm
-	mkdir -p $(@D)
-	$(AS) $(ASFLAGS) -o $@ $<
+all: $(TARGET)
 
-$(BUILD_DIR)/kernel/%.o: $(SRC_DIR)/kernel/%.c
-	mkdir -p $(@D)
+# Link everything
+$(TARGET): $(ALL_OBJS)
+	$(LD) $(LDFLAGS) -o $@ $^
+
+# Compile C files
+$(BUILD_DIR)/%.o: %.c
+	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-iso: kernel.bin
-	bash scripts/make-iso.sh
+# Assemble ASM files
+$(BUILD_DIR)/%.o: %.asm
+	@mkdir -p $(dir $@)
+	$(AS) $(ASFLAGS) $< -o $@
 
-nekoos.iso: iso
-
-run-iso: nekoos.iso
-	qemu-system-i386 -cdrom nekoos.iso -monitor stdio
-
-run: run-iso
-
+# Clean
 clean:
-	rm -rf $(BUILD_DIR) nekoos.iso isodir
+	rm -rf $(BUILD_DIR)
 
-debug: nekoos.iso
-	qemu-system-i386 -cdrom nekoos.iso -s -S &
-	@echo "GDB server running on port 1234"
-	@echo "Run: gdb -ex 'target remote localhost:1234' -ex 'symbol-file build/kernel.bin'"
+# Run in QEMU
+run: $(TARGET)
+	qemu-system-i386 -kernel $(TARGET)
+
+.PHONY: all clean run
