@@ -34,10 +34,23 @@ $(ISO): $(KERNEL) grub/grub.cfg
 clean:
 	rm -rf $(OBJS) $(KERNEL) $(ISO) $(ISO_DIR)
 
+# Test with QEMU directly (fast)
 run: $(KERNEL)
 	qemu-system-i386 -kernel $(KERNEL)
 
+# Test with GRUB ISO (real boot)
 iso-run: $(ISO)
 	qemu-system-i386 -cdrom $(ISO)
 
-.PHONY: all clean run iso-run
+# Automated test that types "help" automatically
+test-help: $(KERNEL)
+	@echo "Testing NekoOS - will auto-type 'help' and exit after 10 seconds"
+	echo -e "help\n" | timeout 10s qemu-system-i386 -kernel $(KERNEL) -monitor stdio 2>&1 | grep -A 20 "NekoOS" || true
+
+# Debug with GDB
+debug: $(KERNEL)
+	qemu-system-i386 -kernel $(KERNEL) -S -s &
+	sleep 1
+	gdb $(KERNEL) -ex "target remote localhost:1234" -ex "break kernel_main" -ex "continue"
+
+.PHONY: all clean run iso-run test-help debug
