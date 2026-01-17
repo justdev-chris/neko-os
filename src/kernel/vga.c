@@ -8,13 +8,6 @@ int cursor_x = 0;
 int cursor_y = 0;
 uint8_t vga_color = 0x0F;
 
-void vga_init(void) {
-    vga_clear();
-    // Disable cursor (optional)
-    outb(0x3D4, 0x0A);
-    outb(0x3D5, 0x20);
-}
-
 void vga_set_color(uint8_t color) {
     vga_color = color;
 }
@@ -27,20 +20,19 @@ void vga_clear(void) {
     cursor_y = 0;
 }
 
-void vga_scroll(void) {
-    // Move all lines up
-    for (int y = 0; y < vga_height - 1; y++) {
-        for (int x = 0; x < vga_width; x++) {
-            vga_buffer[y * vga_width + x] = vga_buffer[(y + 1) * vga_width + x];
-        }
+void vga_putchar_at(int x, int y, char c) {
+    if (x >= 0 && x < vga_width && y >= 0 && y < vga_height) {
+        vga_buffer[y * vga_width + x] = (vga_color << 8) | c;
     }
-    
-    // Clear bottom line
-    for (int x = 0; x < vga_width; x++) {
-        vga_buffer[(vga_height - 1) * vga_width + x] = (vga_color << 8) | ' ';
-    }
-    
-    cursor_y = vga_height - 1;
+}
+
+void vga_puts_at(int x, int y, const char* str) {
+    int ox = cursor_x, oy = cursor_y;
+    cursor_x = x;
+    cursor_y = y;
+    vga_puts(str);
+    cursor_x = ox;
+    cursor_y = oy;
 }
 
 void vga_putchar(char c) {
@@ -50,15 +42,10 @@ void vga_putchar(char c) {
     } else if (c == '\t') {
         cursor_x = (cursor_x + 4) & ~(4 - 1);
     } else if (c == '\b') {
-        if (cursor_x > 0) {
-            cursor_x--;
-        } else if (cursor_y > 0) {
-            cursor_y--;
-            cursor_x = vga_width - 1;
-        }
-        vga_buffer[cursor_y * vga_width + cursor_x] = (vga_color << 8) | ' ';
+        if (cursor_x > 0) cursor_x--;
+        vga_putchar_at(cursor_x, cursor_y, ' ');
     } else {
-        vga_buffer[cursor_y * vga_width + cursor_x] = (vga_color << 8) | c;
+        vga_putchar_at(cursor_x, cursor_y, c);
         cursor_x++;
     }
     
@@ -68,19 +55,25 @@ void vga_putchar(char c) {
     }
     
     if (cursor_y >= vga_height) {
-        vga_scroll();
+        cursor_y = vga_height - 1;
+        // Simple scroll
+        for (int y = 0; y < vga_height - 1; y++) {
+            for (int x = 0; x < vga_width; x++) {
+                vga_buffer[y * vga_width + x] = vga_buffer[(y + 1) * vga_width + x];
+            }
+        }
+        for (int x = 0; x < vga_width; x++) {
+            vga_buffer[(vga_height - 1) * vga_width + x] = (vga_color << 8) | ' ';
+        }
     }
-    
-    // Update hardware cursor (optional)
-    uint16_t pos = cursor_y * vga_width + cursor_x;
-    outb(0x3D4, 0x0F);
-    outb(0x3D5, (uint8_t)(pos & 0xFF));
-    outb(0x3D4, 0x0E);
-    outb(0x3D5, (uint8_t)((pos >> 8) & 0xFF));
 }
 
 void vga_puts(const char* str) {
     while (*str) {
         vga_putchar(*str++);
     }
+}
+
+void vga_init(void) {
+    vga_clear();
 }
