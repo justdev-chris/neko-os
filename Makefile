@@ -1,56 +1,50 @@
-# NekoOS Makefile - Root directory
-# Use TAB for indentation, not spaces!
-
-CC = gcc
+# NekoOS Makefile
 AS = nasm
+CC = gcc
 LD = ld
-CFLAGS = -m32 -ffreestanding -nostdlib -Wall -Wextra
+CFLAGS = -m32 -ffreestanding -nostdlib -Wall -Wextra -O2
 ASFLAGS = -f elf32
 LDFLAGS = -m elf_i386 -T linker.ld
 
-# Source files
 SRC_DIR = src
 BUILD_DIR = build
 
-# Object files - ADD multiboot.asm here!
 KERNEL_OBJS = \
 	$(BUILD_DIR)/boot/multiboot.o \
 	$(BUILD_DIR)/kernel/main.o \
 	$(BUILD_DIR)/kernel/multiboot.o \
 	$(BUILD_DIR)/kernel/vga.o
 
-# Targets
-.PHONY: all clean run
+.PHONY: all clean run debug
 
 all: nekoos.iso
 
-# Main kernel binary
 kernel.bin: $(KERNEL_OBJS)
 	$(LD) $(LDFLAGS) -o $(BUILD_DIR)/kernel.bin $^
+	@echo "Kernel built: $(BUILD_DIR)/kernel.bin"
 
-# Assembly files (Multiboot header)
 $(BUILD_DIR)/boot/%.o: $(SRC_DIR)/boot/%.asm
 	mkdir -p $(@D)
 	$(AS) $(ASFLAGS) -o $@ $<
 
-# C files
 $(BUILD_DIR)/kernel/%.o: $(SRC_DIR)/kernel/%.c
 	mkdir -p $(@D)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# ISO creation
 iso: kernel.bin
 	bash scripts/make-iso.sh
 
 nekoos.iso: iso
-	@echo "ISO created: nekoos.iso"
 
-# Run in QEMU
-run: nekoos.iso
+run-iso: nekoos.iso
 	qemu-system-i386 -cdrom nekoos.iso -monitor stdio
 
-# Clean
+run: run-iso
+
 clean:
 	rm -rf $(BUILD_DIR) nekoos.iso isodir
 
-.PHONY: all clean run iso
+debug: nekoos.iso
+	qemu-system-i386 -cdrom nekoos.iso -s -S &
+	@echo "GDB server running on port 1234"
+	@echo "Run: gdb -ex 'target remote localhost:1234' -ex 'symbol-file build/kernel.bin'"
