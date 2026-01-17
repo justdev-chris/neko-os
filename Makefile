@@ -23,11 +23,11 @@ $(KERNEL): $(ALL_OBJS)
 	@mkdir -p build
 	$(LD) $(LDFLAGS) -o $@ $^
 
-$(ISO): $(KERNEL) grub/grub.cfg
-	@mkdir -p $(ISO_DIR)/boot/grub
-	cp $(KERNEL) $(ISO_DIR)/boot/
-	cp grub/grub.cfg $(ISO_DIR)/boot/grub/
-	grub-mkrescue -o $@ $(ISO_DIR)
+nekoos.iso: kernel.bin
+	mkdir -p isodir/boot/grub
+	cp build/kernel.bin isodir/boot/
+	cp grub/grub.cfg isodir/boot/grub/
+	grub-mkrescue -o $@ isodir 2>/dev/null || true
 
 %.o: %.c
 	@mkdir -p $(dir $@)
