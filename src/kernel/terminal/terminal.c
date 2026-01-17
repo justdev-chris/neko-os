@@ -2,7 +2,9 @@
 #include "../vga.h"
 #include "../keyboard/keyboard.h"
 #include "../game/snake.h"
+#include "../io.h"
 #include <stddef.h>
+#include <string.h>
 
 #define MAX_INPUT 256
 static char input_buffer[MAX_INPUT];
@@ -102,18 +104,4 @@ void terminal_run_shell(void) {
             }
         }
     }
-}
-
-size_t strlen(const char* str) {
-    size_t len = 0;
-    while (str[len]) len++;
-    return len;
-}
-
-int strcmp(const char* s1, const char* s2) {
-    while (*s1 && (*s1 == *s2)) {
-        s1++;
-        s2++;
-    }
-    return *(unsigned char*)s1 - *(unsigned char*)s2;
 }
