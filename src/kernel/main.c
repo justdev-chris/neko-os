@@ -1,78 +1,49 @@
+#include "vga.h"
+#include "terminal.h"
+#include "keyboard.h"
+#include "io.h"
 #include <stdint.h>
 
-volatile uint16_t* vga_buffer = (uint16_t*)0xB8000;
-int vga_width = 80;
-int vga_height = 25;
-int cursor_x = 0;
-int cursor_y = 0;
-uint8_t vga_color = 0x0F;
-
-void vga_clear(void) {
-    for (int i = 0; i < vga_width * vga_height; i++) {
-        vga_buffer[i] = (vga_color << 8) | ' ';
-    }
-    cursor_x = 0;
-    cursor_y = 0;
-}
-
-void vga_putchar(char c) {
-    if (c == '\n') {
-        cursor_x = 0;
-        cursor_y++;
-        return;
-    }
+// NekoOS banner
+void print_banner(void) {
+    vga_set_color(0x0E); // Yellow
+    vga_puts("  _   _      _      ___   ____\n");
+    vga_puts(" | \\ | | ___| | __ / _ \\ / ___|\n");
+    vga_puts(" |  \\| |/ _ \\ |/ /| | | |\\___ \\\n");
+    vga_puts(" | |\\  |  __/   < | |_| |___) |\n");
+    vga_puts(" |_| \\_|\\___|_|\\_\\ \\___/|____/\n\n");
     
-    vga_buffer[cursor_y * vga_width + cursor_x] = (vga_color << 8) | c;
-    cursor_x++;
+    vga_set_color(0x0F); // White
+    vga_puts("NekoOS v0.1.0 - Kernel loaded successfully!\n\n");
     
-    if (cursor_x >= vga_width) {
-        cursor_x = 0;
-        cursor_y++;
-    }
-    
-    if (cursor_y >= vga_height) {
-        for (int i = 0; i < vga_width * (vga_height - 1); i++) {
-            vga_buffer[i] = vga_buffer[i + vga_width];
-        }
-        for (int i = vga_width * (vga_height - 1); i < vga_width * vga_height; i++) {
-            vga_buffer[i] = (vga_color << 8) | ' ';
-        }
-        cursor_y = vga_height - 1;
-    }
-}
-
-void vga_print(const char* str) {
-    while (*str) {
-        vga_putchar(*str++);
-    }
+    vga_set_color(0x0A); // Green
+    vga_puts("[OK] Memory manager\n");
+    vga_puts("[OK] VGA text mode (80x25)\n");
+    vga_puts("[OK] Interrupt handler\n");
+    vga_puts("[OK] PS/2 Keyboard driver\n");
+    vga_puts("[OK] Terminal shell\n\n");
 }
 
 void kernel_main(void) {
-    vga_clear();
+    // Initialize components
+    vga_init();
+    keyboard_init();
+    terminal_init();
     
-    vga_color = 0x0E; // Yellow
-    vga_print("  _   _      _      ___   ____\n");
-    vga_print(" | \\ | | ___| | __ / _ \\ / ___|\n");
-    vga_print(" |  \\| |/ _ \\ |/ /| | | |\\___ \\\n");
-    vga_print(" | |\\  |  __/   < | |_| |___) |\n");
-    vga_print(" |_| \\_|\\___|_|\\_\\ \\___/|____/\n\n");
+    // Show banner
+    print_banner();
     
-    vga_color = 0x0F; // White
-    vga_print("NekoOS v0.1.0\n");
-    vga_print("Kernel loaded successfully!\n\n");
+    vga_set_color(0x0F);
+    vga_puts("System ready. ");
+    vga_set_color(0x0C);
+    vga_puts("meow~");
+    vga_set_color(0x0F);
+    vga_puts("\n\n");
     
-    vga_color = 0x0A; // Green
-    vga_print("[OK] Memory manager\n");
-    vga_print("[OK] VGA text mode\n");
-    vga_print("[OK] Interrupt handler\n\n");
+    // Start the interactive terminal
+    terminal_run_shell();
     
-    vga_color = 0x0F; // White
-    vga_print("System ready. ");
-    vga_color = 0x0C; // Red
-    vga_print("meow~");
-    vga_color = 0x0F; // White
-    vga_print("\n\n> ");
-    
+    // Should never reach here
     while (1) {
         asm volatile ("hlt");
     }
