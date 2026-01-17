@@ -10,6 +10,17 @@ nekoos.iso: build/kernel.bin
 	cp grub/grub.cfg isodir/boot/grub/
 	grub-mkrescue -o $@ isodir
 
+# C files
+src/kernel/%.o: src/kernel/%.c
+	gcc -m32 -ffreestanding -nostdlib -Wall -Wextra -O2 -I./src/kernel -c $< -o $@
+
+# ASM files
+src/boot/multiboot.o: src/boot/multiboot.asm
+	nasm -f elf32 $< -o $@
+
+src/kernel/io.o: src/kernel/io.asm
+	nasm -f elf32 $< -o $@
+
 clean:
 	rm -rf src/kernel/*.o src/boot/*.o build/kernel.bin nekoos.iso isodir
 
