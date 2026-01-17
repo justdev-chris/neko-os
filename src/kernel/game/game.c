@@ -1,5 +1,5 @@
-#include ".../vga.h"
-#include ".../keyboard/keyboard.h"
+#include "vga.h"
+#include "../keyboard/keyboard.h"
 
 // Add these extern declarations for vga.c variables
 extern volatile uint16_t* vga_buffer;
