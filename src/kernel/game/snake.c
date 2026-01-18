@@ -14,16 +14,34 @@ static int snake_length = 3;
 static int direction = 0; // 0=right, 1=down, 2=left, 3=up
 static int apple_x, apple_y;
 static int game_over = 0;
+static int tick_counter = 0; // For better random seeding
 
-// Simple delay function
+// Better delay function
 static void delay(int ticks) {
-    for (volatile int i = 0; i < ticks * 10000; i++);
+    for (volatile int i = 0; i < ticks * 50000; i++);
 }
 
 static void place_apple(void) {
-    // Simple pseudo-random placement
-    apple_x = (apple_x * 1103515245 + 12345) % (WIDTH - 2) + 1;
-    apple_y = (apple_y * 1103515245 + 12345) % (HEIGHT - 2) + 1;
+    // Better pseudo-random placement
+    tick_counter++;
+    apple_x = (tick_counter * 1103515245 + 12345) % WIDTH;
+    apple_y = (tick_counter * 123456789 + 98765) % HEIGHT;
+    
+    // Make sure apple doesn't spawn on snake
+    for (int i = 0; i < snake_length; i++) {
+        if (snake_x[i] == apple_x && snake_y[i] == apple_y) {
+            // Try a different position
+            tick_counter += 17;
+            place_apple();
+            return;
+        }
+    }
+    
+    // Make sure apple is within borders
+    if (apple_x < 0) apple_x = 1;
+    if (apple_x >= WIDTH) apple_x = WIDTH - 2;
+    if (apple_y < 0) apple_y = 1;
+    if (apple_y >= HEIGHT) apple_y = HEIGHT - 2;
 }
 
 static void init_game(void) {
@@ -36,11 +54,25 @@ static void init_game(void) {
     
     direction = 0;
     game_over = 0;
+    tick_counter = 0;
     
-    // Place first apple
+    // Place first apple (NOT on snake)
     apple_x = WIDTH/2 + 5;
     apple_y = HEIGHT/2;
-    place_apple();
+    
+    // Make sure apple isn't on snake
+    int on_snake = 1;
+    while (on_snake) {
+        on_snake = 0;
+        for (int i = 0; i < snake_length; i++) {
+            if (apple_x == snake_x[i] && apple_y == snake_y[i]) {
+                apple_x = (apple_x + 3) % WIDTH;
+                apple_y = (apple_y + 2) % HEIGHT;
+                on_snake = 1;
+                break;
+            }
+        }
+    }
 }
 
 static void draw_game(void) {
@@ -92,7 +124,7 @@ static void draw_game(void) {
             // Empty space
             if (!drawn) {
                 vga_set_color(0x07);
-                vga_putchar(' ');
+                vga_putchar('.');
             }
         }
         
@@ -107,9 +139,20 @@ static void draw_game(void) {
     }
     vga_putchar('\n');
     
+    // Debug info
+    vga_set_color(0x0D);
+    vga_puts("\nApple at: (");
+    // Simple number display
+    if (apple_x < 10) vga_putchar('0' + apple_x);
+    else vga_putchar('0' + apple_x/10);
+    vga_putchar(',');
+    if (apple_y < 10) vga_putchar('0' + apple_y);
+    else vga_putchar('0' + apple_y/10);
+    vga_puts(")");
+    
     // Draw score and controls
     vga_set_color(0x0E);
-    vga_puts("\nScore: ");
+    vga_puts("  Score: ");
     for (int i = 0; i < (snake_length - 3); i++) {
         vga_putchar('*');
     }
@@ -149,10 +192,11 @@ static void check_collisions(void) {
         }
     }
     
-    // Apple collision - ONLY grow when eating apple
+    // Apple collision
     if (snake_x[0] == apple_x && snake_y[0] == apple_y) {
-        // Grow snake (only if we have room)
+        // Grow snake
         if (snake_length < MAX_LENGTH) {
+            // Add new segment at the tail position
             snake_x[snake_length] = snake_x[snake_length-1];
             snake_y[snake_length] = snake_y[snake_length-1];
             snake_length++;
@@ -198,8 +242,8 @@ void snake_run(void) {
         move_snake();
         check_collisions();
         
-        // DELAY - this fixes the speed issue
-        delay(100);
+        // SLOWER DELAY - increased from 100 to 300
+        delay(300);
     }
     
     // Game over screen
