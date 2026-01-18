@@ -25,6 +25,12 @@ void keyboard_init(void) {
     asm volatile("sti");  // Enable interrupts
 }
 
+// Add this back for game.c
+uint8_t keyboard_get_scancode(void) {
+    if (!(inb(0x64) & 0x1)) return 0;
+    return inb(0x60);
+}
+
 char keyboard_getchar(void) {
     // Poll keyboard status
     if (!(inb(0x64) & 0x1)) {
