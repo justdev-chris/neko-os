@@ -99,6 +99,11 @@ void terminal_execute_command(void) {
 void terminal_run_shell(void) {
     terminal_print_prompt();
     
+    // Simple keyboard test message
+    terminal_setcolor(0x0E);
+    terminal_writestring("(Type 'help' then press Enter)\n");
+    terminal_setcolor(0x0F);
+    
     while (1) {
         char c = keyboard_getchar();
         if (c) {
