@@ -2,14 +2,22 @@
 #include "../vga.h"
 #include "../keyboard/keyboard.h"
 #include "../game/snake.h"
-#include "../game/game.h"  // Your neko game header
+#include "../game/game.h"
 #include "../io.h"
 #include <stddef.h>
-#include <string.h>
 
 #define MAX_INPUT 256
 static char input_buffer[MAX_INPUT];
 static size_t input_pos = 0;
+
+// strcmp implementation since we're using -nostdlib
+static int strcmp(const char* s1, const char* s2) {
+    while (*s1 && (*s1 == *s2)) {
+        s1++;
+        s2++;
+    }
+    return *(const unsigned char*)s1 - *(const unsigned char*)s2;
+}
 
 void terminal_init(void) {
     vga_clear();
@@ -65,8 +73,7 @@ void terminal_execute_command(void) {
         terminal_clear();
     }
     else if (strcmp(input_buffer, "neko game") == 0) {
-        // Call your neko game function
-        run_neko_game();  // Your function name
+        run_neko_game();
         terminal_clear();
     }
     else if (strcmp(input_buffer, "neko") == 0) {
