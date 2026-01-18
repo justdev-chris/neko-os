@@ -5,19 +5,11 @@ align 4
 
 multiboot_header:
     dd 0x1BADB002              ; Magic
-    dd 0x00000007              ; Flags: align + meminfo + framebuffer
-    dd -(0x1BADB002 + 0x00000007) ; Checksum
+    dd 0x00000003              ; Flags: align + meminfo ONLY (no framebuffer)
+    dd -(0x1BADB002 + 0x00000003) ; Checksum
     
-    ; Framebuffer request
-    dd 0                       ; header_addr
-    dd 0                       ; load_addr
-    dd 0                       ; load_end_addr
-    dd 0                       ; bss_end_addr
-    dd 0                       ; entry_addr
-    dd 0                       ; mode_type (0 = linear graphics)
-    dd 1024                    ; width
-    dd 768                     ; height
-    dd 32                      ; depth (bpp)
+    ; NO FRAMEBUFFER REQUEST SECTION
+    ; (remove the framebuffer settings)
 
 section .text
 global _start
