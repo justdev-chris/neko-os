@@ -2,10 +2,16 @@
 
 static unsigned long total_memory = 0;
 static unsigned long used_memory = 0;
+static unsigned long free_memory = 0;
+
+// Simple memory placement address (start of heap)
+static uint32_t placement_address = 0x100000;  // 1MB mark
 
 void memory_init(unsigned long mem_lower, unsigned long mem_upper) {
-    total_memory = mem_upper - mem_lower;
+    total_memory = mem_upper;  // Upper memory in bytes
     used_memory = 0;
+    free_memory = total_memory;
+    placement_address = 0x100000;  // Start heap at 1MB
 }
 
 unsigned long memory_get_total(void) {
@@ -16,12 +22,23 @@ unsigned long memory_get_used(void) {
     return used_memory;
 }
 
-// Simple placeholder implementations
+// Very simple malloc implementation
 void* malloc(unsigned long size) {
+    // Align size to 4 bytes
+    if (size % 4 != 0) {
+        size += 4 - (size % 4);
+    }
+    
+    void* ret = (void*)placement_address;
+    placement_address += size;
     used_memory += size;
-    return (void*)0x100000;  // Placeholder address
+    free_memory -= size;
+    
+    return ret;
 }
 
 void free(void* ptr) {
-    // Placeholder - would need proper memory management
+    // Simple implementation doesn't support freeing
+    // In a real OS, you'd have a proper memory manager
+    (void)ptr;  // Avoid unused parameter warning
 }
