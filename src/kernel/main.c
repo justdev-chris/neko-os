@@ -1,11 +1,11 @@
 #include "vga.h"
-#include "io.h"  
 #include "keyboard/keyboard.h"
 #include "terminal/terminal.h"
 #include "game/game.h"
 #include "game/snake.h"
 #include "timer/timer.h"
 #include "memory/memory.h"
+#include "io.h"  // Make sure this is included for outb
 #include <stdint.h>
 
 struct multiboot_info {
@@ -58,7 +58,7 @@ struct idt_ptr {
 struct idt_entry idt[IDT_ENTRIES];
 struct idt_ptr idtp;
 
-// External assembly functions (defined in interrupts.s)
+// External assembly functions
 extern void idt_load(struct idt_ptr*);
 extern void irq0_handler(void);
 extern void irq1_handler(void);
@@ -69,7 +69,7 @@ void idt_install(void);
 void irq_remap(void);
 void irq_install(void);
 
-// C handler wrappers
+// C handler wrappers - NOT static so they can be called from assembly
 void irq0_handler_c(void) {
     timer_handler();
     // Send EOI to master PIC
