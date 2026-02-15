@@ -8,10 +8,11 @@ static unsigned long free_memory = 0;
 static uint32_t placement_address = 0x100000;  // 1MB mark
 
 void memory_init(unsigned long mem_lower, unsigned long mem_upper) {
-    total_memory = mem_upper;  // Upper memory in bytes
+    (void)mem_lower;  // Suppress unused parameter warning
+    total_memory = mem_upper;
     used_memory = 0;
     free_memory = total_memory;
-    placement_address = 0x100000;  // Start heap at 1MB
+    placement_address = 0x100000;
 }
 
 unsigned long memory_get_total(void) {
