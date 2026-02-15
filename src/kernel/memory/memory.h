@@ -1,6 +1,8 @@
 #ifndef MEMORY_H
 #define MEMORY_H
 
+#include <stdint.h>
+
 // Initialize memory management
 void memory_init(unsigned long mem_lower, unsigned long mem_upper);
 
