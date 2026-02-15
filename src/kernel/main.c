@@ -3,6 +3,7 @@
 #include "terminal/terminal.h"
 #include "game/game.h"
 #include "game/snake.h"
+#include "timer/timer.h"
 #include <stdint.h>
 
 struct multiboot_info {
@@ -35,6 +36,108 @@ struct multiboot_info {
     uint8_t reserved;
 } __attribute__((packed));
 
+// IDT entry structure
+struct idt_entry {
+    uint16_t base_low;
+    uint16_t selector;
+    uint8_t zero;
+    uint8_t flags;
+    uint16_t base_high;
+} __attribute__((packed));
+
+// IDT pointer structure
+struct idt_ptr {
+    uint16_t limit;
+    uint32_t base;
+} __attribute__((packed));
+
+// IDT and handlers
+#define IDT_ENTRIES 256
+struct idt_entry idt[IDT_ENTRIES];
+struct idt_ptr idtp;
+
+// External assembly functions (you'll need to create these in a .s file)
+extern void idt_load(void);
+extern void irq0_handler(void);  // Timer IRQ
+extern void irq1_handler(void);  // Keyboard IRQ
+
+// Function prototypes
+void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags);
+void idt_install(void);
+void irq_remap(void);
+void irq_install_handler(int irq, void (*handler)(void));
+
+// C handler wrappers
+void irq0_handler_c(void) {
+    timer_handler();
+    // Send EOI to master PIC
+    outb(0x20, 0x20);
+}
+
+void irq1_handler_c(void) {
+    keyboard_handler();  // You'll need to create this in keyboard.c
+    // Send EOI to master PIC
+    outb(0x20, 0x20);
+}
+
+// Default handler for unhandled IRQs
+void irq_default_handler(void) {
+    // Just send EOI
+    outb(0x20, 0x20);
+}
+
+void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags) {
+    idt[num].base_low = base & 0xFFFF;
+    idt[num].base_high = (base >> 16) & 0xFFFF;
+    idt[num].selector = sel;
+    idt[num].zero = 0;
+    idt[num].flags = flags;
+}
+
+void idt_install(void) {
+    idtp.limit = (sizeof(struct idt_entry) * IDT_ENTRIES) - 1;
+    idtp.base = (uint32_t)&idt;
+    
+    // Clear IDT
+    for (int i = 0; i < IDT_ENTRIES; i++) {
+        idt_set_gate(i, 0, 0, 0);
+    }
+    
+    // Load IDT
+    asm volatile("lidt (%0)" : : "r" (&idtp));
+}
+
+void irq_remap(void) {
+    // Remap IRQ table to 0x20-0x2F (protected mode standard)
+    outb(0x20, 0x11);  // Start init of master PIC
+    outb(0xA0, 0x11);  // Start init of slave PIC
+    outb(0x21, 0x20);  // Master PIC vector offset -> 0x20
+    outb(0xA1, 0x28);  // Slave PIC vector offset -> 0x28
+    outb(0x21, 0x04);  // Tell master there's a slave at IRQ2
+    outb(0xA1, 0x02);  // Tell slave its cascade identity
+    outb(0x21, 0x01);  // 8086 mode for master
+    outb(0xA1, 0x01);  // 8086 mode for slave
+    
+    // Clear masks
+    outb(0x21, 0xFD);  // Enable IRQ1 (keyboard) only, mask others
+    outb(0xA1, 0xFF);  // Mask all slave IRQs
+}
+
+void irq_install(void) {
+    irq_remap();
+    
+    // Install IRQ handlers
+    idt_set_gate(32, (uint32_t)irq0_handler, 0x08, 0x8E);  // Timer
+    idt_set_gate(33, (uint32_t)irq1_handler, 0x08, 0x8E);  // Keyboard
+    
+    // Install default handlers for other IRQs (optional)
+    for (int i = 34; i < 48; i++) {
+        idt_set_gate(i, (uint32_t)irq0_handler, 0x08, 0x8E);  // Default to timer handler for now
+    }
+    
+    asm volatile("sti");  // Enable interrupts
+}
+
 void print_banner(void) {
     vga_set_color(0x0E);
     vga_puts("  _   _      _      ___   ____\n");
@@ -50,20 +153,31 @@ void print_banner(void) {
     vga_puts("[OK] VGA text mode\n");
     vga_puts("[OK] Keyboard driver\n");
     vga_puts("[OK] Terminal shell\n");
-    vga_puts("[OK] Snake game\n\n");
+    vga_puts("[OK] Snake game\n");
+    vga_set_color(0x0C);
+    vga_puts("[OK] Timer driver\n");
+    vga_puts("[OK] IRQ handlers\n\n");
 }
 
 void run_text_mode(void) {
     vga_set_color(0x0F);
     vga_puts("Type 'help' for commands\n\n");
     
-    keyboard_init();
     terminal_run_shell();
 }
 
 void kernel_main(uint32_t magic, uint32_t mb_info_addr) {
     vga_init();
+    
+    // Install IDT and IRQs first
+    idt_install();
+    irq_install();
+    
+    // Initialize PIT timer with 100 Hz
+    timer_init(100);
+    
     print_banner();
+    keyboard_init();
     run_text_mode();
     
     while (1) asm("hlt");
