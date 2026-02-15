@@ -53,12 +53,12 @@ static void itoa(unsigned long num, char* str, int base) {
 }
 
 static void format_uptime(char* buffer) {
-    unsigned long seconds = system_ticks / 100;
-    unsigned long minutes = seconds / 60;
+    unsigned long total_seconds = system_ticks;
+    unsigned long minutes = total_seconds / 60;
     unsigned long hours = minutes / 60;
     unsigned long days = hours / 24;
     
-    seconds %= 60;
+    unsigned long seconds = total_seconds % 60;
     minutes %= 60;
     hours %= 24;
     
@@ -272,7 +272,7 @@ static int cat_eye_state = 0;
 void terminal_cat_clock(void) {
     char time_str[9];
     
-    unsigned long total_seconds = system_ticks / 100;
+    unsigned long total_seconds = system_ticks;
     unsigned long hours = (total_seconds / 3600) % 24;
     unsigned long minutes = (total_seconds / 60) % 60;
     unsigned long seconds = total_seconds % 60;
