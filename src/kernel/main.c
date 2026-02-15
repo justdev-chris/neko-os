@@ -129,27 +129,24 @@ void print_banner(void) {
     vga_set_color(0x0F);
 }
 
-void run_text_mode(void) {
-    vga_set_color(0x0F);
-    vga_puts("Type 'help' for commands\n\n");
-    terminal_run_shell();
-}
-
 void kernel_main(uint32_t magic, uint32_t mb_info_addr) {
     (void)magic;
     (void)mb_info_addr;
     
     vga_init();
+    terminal_init();
+    
     idt_install();
     irq_install();
     timer_init(100);
     memory_init(0, 32 * 1024 * 1024);
+    
     print_banner();
     keyboard_init();
     
     asm volatile("sti");
     
-    run_text_mode();
+    terminal_run_shell();
     
     while (1) asm volatile("hlt");
 }
