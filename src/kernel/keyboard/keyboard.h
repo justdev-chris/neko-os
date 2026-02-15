@@ -4,7 +4,8 @@
 #include <stdint.h>
 
 void keyboard_init(void);
-uint8_t keyboard_get_scancode(void);  // Make sure this is here!
+uint8_t keyboard_get_scancode(void);
 char keyboard_getchar(void);
+void keyboard_handler(void);  // Add this for IRQ1 handler
 
 #endif
