@@ -12,12 +12,15 @@ KERNEL_SRCS = \
 	$(SRC_DIR)/vga.c \
 	$(SRC_DIR)/terminal/terminal.c \
 	$(SRC_DIR)/keyboard/keyboard.c \
+	$(SRC_DIR)/timer/timer.c \
+	$(SRC_DIR)/memory/memory.c \
 	$(SRC_DIR)/game/game.c \
 	$(SRC_DIR)/game/snake.c
 
 BOOT_SRCS = \
 	src/boot/multiboot.asm \
-	$(SRC_DIR)/io.asm
+	$(SRC_DIR)/io.asm \
+	$(SRC_DIR)/interrupts.asm
 
 C_OBJS = $(KERNEL_SRCS:.c=.o)
 ASM_OBJS = $(BOOT_SRCS:.asm=.o)
@@ -30,10 +33,15 @@ CFLAGS = -m32 -ffreestanding -nostdlib -Wall -Wextra -O2 \
          -I./src/kernel \
          -I./src/kernel/terminal \
          -I./src/kernel/keyboard \
-         -I./src/kernel/game
+         -I./src/kernel/game \
+         -I./src/kernel/timer \
+         -I./src/kernel/memory
 
 ASFLAGS = -f elf32
 LDFLAGS = -m elf_i386 -T linker.ld -nostdlib
+
+# Add these to handle the new directories
+$(shell mkdir -p $(SRC_DIR)/timer $(SRC_DIR)/memory)
 
 all: $(KERNEL_TARGET) $(ISO_TARGET)
 
@@ -55,11 +63,33 @@ $(ISO_TARGET): $(KERNEL_TARGET) grub/grub.cfg
 	@mkdir -p $(dir $@)
 	$(AS) $(ASFLAGS) $< -o $@
 
+# Clean everything
 clean:
 	rm -rf $(ALL_OBJS) $(KERNEL_TARGET) $(ISO_TARGET) $(ISO_DIR)
+	find $(SRC_DIR) -type f -name "*.o" -delete
 
+# Run with QEMU (direct kernel boot)
 run: $(KERNEL_TARGET)
 	qemu-system-i386 -kernel $(KERNEL_TARGET)
 
+# Run with ISO (full boot)
 iso-run: $(ISO_TARGET)
 	qemu-system-i386 -cdrom $(ISO_TARGET)
+
+# Debug with QEMU and GDB
+debug: $(KERNEL_TARGET)
+	qemu-system-i386 -s -S -kernel $(KERNEL_TARGET) &
+	gdb -ex "target remote localhost:1234" -ex "symbol-file $(KERNEL_TARGET)"
+
+# Show kernel size
+size: $(KERNEL_TARGET)
+	@echo "Kernel size:"
+	@size $(KERNEL_TARGET)
+
+# Create directory structure
+dirs:
+	@mkdir -p $(SRC_DIR)/timer
+	@mkdir -p $(SRC_DIR)/memory
+	@mkdir -p $(SRC_DIR)/interrupts
+
+.PHONY: all clean run iso-run debug size dirs
