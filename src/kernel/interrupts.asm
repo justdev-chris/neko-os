@@ -1,10 +1,14 @@
-; NASM syntax for interrupts.s
+; NASM syntax for interrupts.asm
 section .text
 
 ; Export symbols
 global idt_load
 global irq0_handler
 global irq1_handler
+
+; Import C handler functions
+extern irq0_handler_c
+extern irq1_handler_c
 
 ; IDT load function
 idt_load:
