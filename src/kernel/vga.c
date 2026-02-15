@@ -6,10 +6,14 @@ int vga_width = 80;
 int vga_height = 25;
 int cursor_x = 0;
 int cursor_y = 0;
-uint8_t vga_color = 0x0F;
+uint8_t vga_color = 0x0F;  // White on black
 
 void vga_set_color(uint8_t color) {
     vga_color = color;
+}
+
+uint8_t vga_get_color(void) {
+    return vga_color;
 }
 
 void vga_clear(void) {
@@ -44,27 +48,34 @@ void vga_putchar(char c) {
     } else if (c == '\b') {
         if (cursor_x > 0) cursor_x--;
         vga_putchar_at(cursor_x, cursor_y, ' ');
+    } else if (c == '\r') {
+        cursor_x = 0;
     } else {
         vga_putchar_at(cursor_x, cursor_y, c);
         cursor_x++;
     }
     
+    // Handle line wrapping
     if (cursor_x >= vga_width) {
         cursor_x = 0;
         cursor_y++;
     }
     
+    // Handle scrolling
     if (cursor_y >= vga_height) {
-        cursor_y = vga_height - 1;
-        // Simple scroll
-        for (int y = 0; y < vga_height - 1; y++) {
+        // Scroll up one line
+        for (int y = 1; y < vga_height; y++) {
             for (int x = 0; x < vga_width; x++) {
-                vga_buffer[y * vga_width + x] = vga_buffer[(y + 1) * vga_width + x];
+                vga_buffer[(y-1) * vga_width + x] = vga_buffer[y * vga_width + x];
             }
         }
+        
+        // Clear last line
         for (int x = 0; x < vga_width; x++) {
-            vga_buffer[(vga_height - 1) * vga_width + x] = (vga_color << 8) | ' ';
+            vga_buffer[(vga_height-1) * vga_width + x] = (vga_color << 8) | ' ';
         }
+        
+        cursor_y = vga_height - 1;
     }
 }
 
