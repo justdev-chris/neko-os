@@ -222,7 +222,7 @@ void terminal_meminfo(void) {
     
     // Simple progress bar
     terminal_writestring("[");
-    for (int i = 0; i < 20; i++) {
+    for (unsigned int i = 0; i < 20; i++) {
         if (i < percent / 5) {
             terminal_setcolor(0x0C);
             terminal_writestring("#");
