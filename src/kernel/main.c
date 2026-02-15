@@ -1,4 +1,5 @@
 #include "vga.h"
+#include "io.h"  
 #include "keyboard/keyboard.h"
 #include "terminal/terminal.h"
 #include "game/game.h"
