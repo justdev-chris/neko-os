@@ -6,6 +6,9 @@
 // Initialize PIT timer with specified frequency
 void timer_init(uint32_t frequency);
 
+// Timer interrupt handler (called from IRQ0)
+void timer_handler(void);
+
 // Get current system ticks (increments ~100 times per second)
 uint32_t timer_get_ticks(void);
 
