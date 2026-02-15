@@ -76,6 +76,7 @@ void idt_install(void) {
     }
     
     idt_load(&idtp);
+    vga_puts("  IDT installed\n");
 }
 
 void irq_remap(void) {
@@ -89,12 +90,14 @@ void irq_remap(void) {
     outb(0xA1, 0x01);
     outb(0x21, 0xFD);
     outb(0xA1, 0xFF);
+    vga_puts("  IRQ remapped\n");
 }
 
 void irq_install(void) {
     irq_remap();
     idt_set_gate(32, (uint32_t)irq0_handler, 0x08, 0x8E);
     idt_set_gate(33, (uint32_t)irq1_handler, 0x08, 0x8E);
+    vga_puts("  IRQ handlers installed\n");
 }
 
 void irq0_handler_c(void) {
@@ -136,17 +139,28 @@ void kernel_main(uint32_t magic, uint32_t mb_info_addr) {
     vga_init();
     terminal_init();
     
+    vga_puts("Installing IDT...\n");
     idt_install();
+    
+    vga_puts("Installing IRQs...\n");
     irq_install();
+    
+    vga_puts("Initializing timer...\n");
     timer_init(100);
+    
+    vga_puts("Initializing memory...\n");
     memory_init(0, 32 * 1024 * 1024);
     
-    print_banner();  // This prints the ASCII title
+    print_banner();
     
+    vga_puts("Initializing keyboard...\n");
     keyboard_init();
     
+    vga_puts("Enabling interrupts...\n");
     asm volatile("sti");
+    vga_puts("Interrupts enabled!\n");
     
+    vga_puts("Starting shell...\n\n");
     terminal_run_shell();
     
     while (1) asm volatile("hlt");
