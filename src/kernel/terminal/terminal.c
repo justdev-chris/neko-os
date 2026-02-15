@@ -4,18 +4,17 @@
 #include "../game/snake.h"
 #include "../game/game.h"
 #include "../io.h"
-#include "../memory/memory.h"  // You'll need to create this
+#include "../timer/timer.h"
+#include "../memory/memory.h"
 #include <stddef.h>
 
 #define MAX_INPUT 256
 static char input_buffer[MAX_INPUT];
 static size_t input_pos = 0;
 
-// System uptime tracking (in seconds)
 static unsigned long system_ticks = 0;
 static unsigned int tick_counter = 0;
 
-// strcmp implementation since we're using -nostdlib
 static int strcmp(const char* s1, const char* s2) {
     while (*s1 && (*s1 == *s2)) {
         s1++;
@@ -24,7 +23,6 @@ static int strcmp(const char* s1, const char* s2) {
     return *(const unsigned char*)s1 - *(const unsigned char*)s2;
 }
 
-// Convert integer to string
 static void itoa(unsigned long num, char* str, int base) {
     int i = 0;
     if (num == 0) {
@@ -40,7 +38,6 @@ static void itoa(unsigned long num, char* str, int base) {
     }
     str[i] = '\0';
     
-    // Reverse the string
     int start = 0;
     int end = i - 1;
     while (start < end) {
@@ -52,9 +49,8 @@ static void itoa(unsigned long num, char* str, int base) {
     }
 }
 
-// Format uptime string
 static void format_uptime(char* buffer) {
-    unsigned long seconds = system_ticks / 100;  // Assuming 100 ticks per second
+    unsigned long seconds = system_ticks / 100;
     unsigned long minutes = seconds / 60;
     unsigned long hours = minutes / 60;
     unsigned long days = hours / 24;
@@ -90,18 +86,16 @@ static void format_uptime(char* buffer) {
     buffer[pos] = '\0';
 }
 
-// Colored text output
 void terminal_writestring_color(const char* data, uint8_t color) {
-    uint8_t old_color = vga_get_color();  // You'll need to add this function to vga.c
+    uint8_t old_color = vga_get_color();
     vga_set_color(color);
     vga_puts(data);
     vga_set_color(old_color);
 }
 
-// Update system tick (call this from timer interrupt)
 void terminal_update_tick(void) {
     tick_counter++;
-    if (tick_counter >= 100) {  // Assuming 100 ticks per second
+    if (tick_counter >= 100) {
         system_ticks++;
         tick_counter = 0;
     }
@@ -109,7 +103,7 @@ void terminal_update_tick(void) {
 
 void terminal_init(void) {
     vga_clear();
-    vga_set_color(0x0F);  // White on black
+    vga_set_color(0x0F);
     system_ticks = 0;
     tick_counter = 0;
 }
@@ -136,7 +130,31 @@ void terminal_print_prompt(void) {
     input_pos = 0;
 }
 
-// Screenfetch-like system info
+void terminal_panic(const char* message) {
+    asm volatile("cli");
+    
+    vga_set_color(0x1F);
+    vga_clear();
+    
+    vga_puts("\n\n\n");
+    vga_set_color(0x1C);
+    vga_puts("    /\\_/\\\n");
+    vga_puts("   ( x.x )  NEKOOS PANIC\n");
+    vga_puts("    > ^ <\n\n");
+    
+    vga_set_color(0x1F);
+    vga_puts("    ");
+    vga_puts(message);
+    vga_puts("\n\n");
+    
+    vga_set_color(0x1E);
+    vga_puts("    System halted.\n\n");
+    
+    while(1) {
+        asm volatile("hlt");
+    }
+}
+
 void terminal_screenfetch(void) {
     terminal_setcolor(0x0C);
     terminal_writestring("          /\\_/\\\n");
@@ -162,7 +180,7 @@ void terminal_screenfetch(void) {
     terminal_setcolor(0x0A);
     terminal_writestring("Kernel");
     terminal_setcolor(0x0F);
-    terminal_writestring(": 0.1.0-neko\n");
+    terminal_writestring(": 0.1.4-neko\n");
     
     char uptime_str[50];
     format_uptime(uptime_str);
@@ -181,10 +199,9 @@ void terminal_screenfetch(void) {
     terminal_writestring(": NekoSH 1.0\n");
 }
 
-// Memory information command
 void terminal_meminfo(void) {
-    unsigned long total_mem = memory_get_total();    // You'll need to implement these
-    unsigned long used_mem = memory_get_used();      // in a new memory.h/memory.c
+    unsigned long total_mem = memory_get_total();
+    unsigned long used_mem = memory_get_used();
     unsigned long free_mem = total_mem - used_mem;
     
     terminal_setcolor(0x0F);
@@ -213,14 +230,12 @@ void terminal_meminfo(void) {
     terminal_writestring(num_str);
     terminal_writestring(" bytes\n");
     
-    // Show percentage
     unsigned int percent = (used_mem * 100) / total_mem;
     terminal_writestring("\nUsage: ");
     itoa(percent, num_str, 10);
     terminal_writestring(num_str);
     terminal_writestring("% ");
     
-    // Simple progress bar
     terminal_writestring("[");
     for (unsigned int i = 0; i < 20; i++) {
         if (i < percent / 5) {
@@ -235,7 +250,6 @@ void terminal_meminfo(void) {
     terminal_writestring("]\n");
 }
 
-// Uptime command
 void terminal_uptime(void) {
     char uptime_str[50];
     format_uptime(uptime_str);
@@ -247,18 +261,15 @@ void terminal_uptime(void) {
     terminal_writestring("\n");
 }
 
-// Cat clock with animated eyes
 static int cat_eye_state = 0;
 void terminal_cat_clock(void) {
     char time_str[9];
     
-    // Get current time from uptime (you might want a real RTC driver later)
     unsigned long total_seconds = system_ticks / 100;
     unsigned long hours = (total_seconds / 3600) % 24;
     unsigned long minutes = (total_seconds / 60) % 60;
     unsigned long seconds = total_seconds % 60;
     
-    // Format time
     char num[3];
     int pos = 0;
     
@@ -277,7 +288,6 @@ void terminal_cat_clock(void) {
     for (int i = 0; num[i]; i++) time_str[pos++] = num[i];
     time_str[pos] = '\0';
     
-    // Animated cat face (eyes blink every few seconds)
     terminal_setcolor(0x0E);
     if (seconds % 4 == 0 && cat_eye_state == 0) {
         cat_eye_state = 1;
@@ -372,6 +382,12 @@ void terminal_execute_command(void) {
         terminal_writestring("color");
         terminal_setcolor(0x0F);
         terminal_writestring("     - Test colors\n");
+        
+        terminal_writestring("  ");
+        terminal_setcolor(0x0C);
+        terminal_writestring("panic");
+        terminal_setcolor(0x0F);
+        terminal_writestring("     - Test panic screen\n");
     } 
     else if (strcmp(input_buffer, "clear") == 0) {
         terminal_clear();
@@ -411,14 +427,15 @@ void terminal_execute_command(void) {
         terminal_cat_clock();
     }
     else if (strcmp(input_buffer, "color") == 0) {
-        // Color test
-        terminal_writestring("Color test:\n");
         for (int i = 0; i < 16; i++) {
             terminal_setcolor(i);
             terminal_writestring(" Neko ");
         }
         terminal_setcolor(0x0F);
         terminal_writestring("\n");
+    }
+    else if (strcmp(input_buffer, "panic") == 0) {
+        terminal_panic("Test panic from command");
     }
     else {
         terminal_setcolor(0x0C);
@@ -431,7 +448,6 @@ void terminal_execute_command(void) {
 void terminal_run_shell(void) {
     terminal_print_prompt();
     
-    // Simple welcome message
     terminal_setcolor(0x0E);
     terminal_writestring("(Type 'help' then press Enter)\n");
     terminal_setcolor(0x0F);
