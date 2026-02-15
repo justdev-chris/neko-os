@@ -12,6 +12,7 @@ void terminal_clear(void);
 void terminal_print_prompt(void);
 void terminal_execute_command(void);
 void terminal_run_shell(void);
-void terminal_update_tick(void);  // New function for timer
+void terminal_update_tick(void);
+void terminal_panic(const char* message);
 
 #endif
