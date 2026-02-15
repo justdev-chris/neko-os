@@ -1,6 +1,7 @@
 #include "timer.h"
 #include "../io.h"
 #include "../terminal/terminal.h"
+#include "../vga.h"
 
 #define PIT_COMMAND 0x43
 #define PIT_CHANNEL0 0x40
@@ -16,6 +17,14 @@ void timer_init(uint32_t frequency) {
     outb(PIT_CHANNEL0, (divisor >> 8) & 0xFF);
     
     timer_ticks = 0;
+    
+    vga_set_color(0x0A);
+    vga_puts("  Timer initialized at ");
+    vga_putchar('0' + frequency / 100);
+    vga_putchar('0' + (frequency / 10) % 10);
+    vga_putchar('0' + frequency % 10);
+    vga_puts(" Hz\n");
+    vga_set_color(0x0F);
 }
 
 void timer_handler(void) {
