@@ -15,6 +15,10 @@ static size_t input_pos = 0;
 static unsigned long system_ticks = 0;
 static unsigned int tick_counter = 0;
 
+// Declare cursor variables from vga.c
+extern int cursor_x;
+extern int cursor_y;
+
 static int strcmp(const char* s1, const char* s2) {
     while (*s1 && (*s1 == *s2)) {
         s1++;
@@ -106,6 +110,8 @@ void terminal_init(void) {
     vga_set_color(0x0F);
     system_ticks = 0;
     tick_counter = 0;
+    cursor_x = 0;
+    cursor_y = 0;
 }
 
 void terminal_putchar(char c) {
@@ -122,11 +128,13 @@ void terminal_setcolor(uint8_t color) {
 
 void terminal_clear(void) {
     vga_clear();
+    cursor_x = 0;
+    cursor_y = 0;
 }
 
 void terminal_print_prompt(void) {
     terminal_setcolor(0x0F);
-    terminal_writestring("\nneko@os:~$ ");
+    terminal_writestring("neko@os:~$ ");
     input_pos = 0;
 }
 
@@ -393,14 +401,17 @@ void terminal_execute_command(void) {
         terminal_clear();
         terminal_setcolor(0x0E);
         terminal_writestring("NekoOS Terminal\n");
+        terminal_print_prompt();
     }
     else if (strcmp(input_buffer, "snake") == 0) {
         snake_run();
         terminal_clear();
+        terminal_print_prompt();
     }
     else if (strcmp(input_buffer, "neko game") == 0) {
         run_neko_game();
         terminal_clear();
+        terminal_print_prompt();
     }
     else if (strcmp(input_buffer, "neko") == 0) {
         terminal_setcolor(0x0E);
@@ -446,18 +457,18 @@ void terminal_execute_command(void) {
 }
 
 void terminal_run_shell(void) {
-    terminal_print_prompt();
-    
+    terminal_clear();
     terminal_setcolor(0x0E);
-    terminal_writestring("(Type 'help' then press Enter)\n");
+    terminal_writestring("NekoOS Terminal\n");
     terminal_setcolor(0x0F);
+    terminal_writestring("Type 'help' for commands\n\n");
+    terminal_print_prompt();
     
     while (1) {
         char c = keyboard_getchar();
         if (c) {
             if (c == '\n') {
                 terminal_execute_command();
-                terminal_print_prompt();
             } else if (c == '\b') {
                 if (input_pos > 0) {
                     input_pos--;
