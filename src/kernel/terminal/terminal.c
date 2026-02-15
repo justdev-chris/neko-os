@@ -15,7 +15,6 @@ static size_t input_pos = 0;
 static unsigned long system_ticks = 0;
 static unsigned int tick_counter = 0;
 
-// Declare cursor variables from vga.c
 extern int cursor_x;
 extern int cursor_y;
 
@@ -317,7 +316,10 @@ void terminal_cat_clock(void) {
 void terminal_execute_command(void) {
     input_buffer[input_pos] = '\0';
     
-    if (input_pos == 0) return;
+    if (input_pos == 0) {
+        terminal_print_prompt();
+        return;
+    }
     
     terminal_writestring("\n");
     
@@ -325,93 +327,29 @@ void terminal_execute_command(void) {
         terminal_setcolor(0x0A);
         terminal_writestring("Available commands:\n");
         terminal_setcolor(0x0F);
-        terminal_writestring("  ");
-        terminal_setcolor(0x0C);
-        terminal_writestring("help");
-        terminal_setcolor(0x0F);
-        terminal_writestring("      - Show this help\n");
-        
-        terminal_writestring("  ");
-        terminal_setcolor(0x0C);
-        terminal_writestring("clear");
-        terminal_setcolor(0x0F);
-        terminal_writestring("     - Clear screen\n");
-        
-        terminal_writestring("  ");
-        terminal_setcolor(0x0C);
-        terminal_writestring("snake");
-        terminal_setcolor(0x0F);
-        terminal_writestring("     - Play Snake game\n");
-        
-        terminal_writestring("  ");
-        terminal_setcolor(0x0C);
-        terminal_writestring("neko game");
-        terminal_setcolor(0x0F);
-        terminal_writestring(" - Play Neko game\n");
-        
-        terminal_writestring("  ");
-        terminal_setcolor(0x0C);
-        terminal_writestring("neko");
-        terminal_setcolor(0x0F);
-        terminal_writestring("      - Display cat\n");
-        
-        terminal_writestring("  ");
-        terminal_setcolor(0x0C);
-        terminal_writestring("reboot");
-        terminal_setcolor(0x0F);
-        terminal_writestring("    - Reboot system\n");
-        
-        terminal_writestring("  ");
-        terminal_setcolor(0x0C);
-        terminal_writestring("meminfo");
-        terminal_setcolor(0x0F);
-        terminal_writestring("   - Show memory info\n");
-        
-        terminal_writestring("  ");
-        terminal_setcolor(0x0C);
-        terminal_writestring("uptime");
-        terminal_setcolor(0x0F);
-        terminal_writestring("    - Show system uptime\n");
-        
-        terminal_writestring("  ");
-        terminal_setcolor(0x0C);
-        terminal_writestring("screenfetch");
-        terminal_setcolor(0x0F);
-        terminal_writestring(" - Show system info\n");
-        
-        terminal_writestring("  ");
-        terminal_setcolor(0x0C);
-        terminal_writestring("catclock");
-        terminal_setcolor(0x0F);
-        terminal_writestring("  - Display animated cat clock\n");
-        
-        terminal_writestring("  ");
-        terminal_setcolor(0x0C);
-        terminal_writestring("color");
-        terminal_setcolor(0x0F);
-        terminal_writestring("     - Test colors\n");
-        
-        terminal_writestring("  ");
-        terminal_setcolor(0x0C);
-        terminal_writestring("panic");
-        terminal_setcolor(0x0F);
-        terminal_writestring("     - Test panic screen\n");
+        terminal_writestring("  help      - Show this help\n");
+        terminal_writestring("  clear     - Clear screen\n");
+        terminal_writestring("  snake     - Play Snake game\n");
+        terminal_writestring("  neko game - Play Neko game\n");
+        terminal_writestring("  neko      - Display cat\n");
+        terminal_writestring("  reboot    - Reboot system\n");
+        terminal_writestring("  meminfo   - Show memory info\n");
+        terminal_writestring("  uptime    - Show system uptime\n");
+        terminal_writestring("  screenfetch - Show system info\n");
+        terminal_writestring("  catclock  - Display animated cat clock\n");
+        terminal_writestring("  color     - Test colors\n");
+        terminal_writestring("  panic     - Test panic screen\n");
     } 
     else if (strcmp(input_buffer, "clear") == 0) {
         terminal_clear();
-        terminal_setcolor(0x0E);
-        terminal_writestring("NekoOS Terminal\n");
-        terminal_print_prompt();
     }
     else if (strcmp(input_buffer, "snake") == 0) {
         snake_run();
         terminal_clear();
-        terminal_print_prompt();
     }
     else if (strcmp(input_buffer, "neko game") == 0) {
         run_neko_game();
         terminal_clear();
-        terminal_print_prompt();
     }
     else if (strcmp(input_buffer, "neko") == 0) {
         terminal_setcolor(0x0E);
@@ -454,14 +392,11 @@ void terminal_execute_command(void) {
         terminal_writestring(input_buffer);
         terminal_writestring("\n");
     }
+    
+    terminal_print_prompt();
 }
 
 void terminal_run_shell(void) {
-    terminal_clear();
-    terminal_setcolor(0x0E);
-    terminal_writestring("NekoOS Terminal\n");
-    terminal_setcolor(0x0F);
-    terminal_writestring("Type 'help' for commands\n\n");
     terminal_print_prompt();
     
     while (1) {
