@@ -6,7 +6,7 @@ int vga_width = 80;
 int vga_height = 25;
 int cursor_x = 0;
 int cursor_y = 0;
-uint8_t vga_color = 0x0F;  // White on black
+uint8_t vga_color = 0x0F;
 
 void vga_set_color(uint8_t color) {
     vga_color = color;
@@ -55,22 +55,18 @@ void vga_putchar(char c) {
         cursor_x++;
     }
     
-    // Handle line wrapping
     if (cursor_x >= vga_width) {
         cursor_x = 0;
         cursor_y++;
     }
     
-    // Handle scrolling
     if (cursor_y >= vga_height) {
-        // Scroll up one line
         for (int y = 1; y < vga_height; y++) {
             for (int x = 0; x < vga_width; x++) {
                 vga_buffer[(y-1) * vga_width + x] = vga_buffer[y * vga_width + x];
             }
         }
         
-        // Clear last line
         for (int x = 0; x < vga_width; x++) {
             vga_buffer[(vga_height-1) * vga_width + x] = (vga_color << 8) | ' ';
         }
