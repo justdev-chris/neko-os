@@ -4,6 +4,7 @@
 #include "game/game.h"
 #include "game/snake.h"
 #include "timer/timer.h"
+#include "memory/memory.h"
 #include <stdint.h>
 
 struct multiboot_info {
@@ -56,16 +57,16 @@ struct idt_ptr {
 struct idt_entry idt[IDT_ENTRIES];
 struct idt_ptr idtp;
 
-// External assembly functions (you'll need to create these in a .s file)
-extern void idt_load(void);
-extern void irq0_handler(void);  // Timer IRQ
-extern void irq1_handler(void);  // Keyboard IRQ
+// External assembly functions (defined in interrupts.s)
+extern void idt_load(struct idt_ptr*);
+extern void irq0_handler(void);
+extern void irq1_handler(void);
 
 // Function prototypes
 void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags);
 void idt_install(void);
 void irq_remap(void);
-void irq_install_handler(int irq, void (*handler)(void));
+void irq_install(void);
 
 // C handler wrappers
 void irq0_handler_c(void) {
@@ -75,14 +76,8 @@ void irq0_handler_c(void) {
 }
 
 void irq1_handler_c(void) {
-    keyboard_handler();  // You'll need to create this in keyboard.c
+    keyboard_handler();
     // Send EOI to master PIC
-    outb(0x20, 0x20);
-}
-
-// Default handler for unhandled IRQs
-void irq_default_handler(void) {
-    // Just send EOI
     outb(0x20, 0x20);
 }
 
@@ -104,7 +99,7 @@ void idt_install(void) {
     }
     
     // Load IDT
-    asm volatile("lidt (%0)" : : "r" (&idtp));
+    idt_load(&idtp);
 }
 
 void irq_remap(void) {
@@ -129,11 +124,6 @@ void irq_install(void) {
     // Install IRQ handlers
     idt_set_gate(32, (uint32_t)irq0_handler, 0x08, 0x8E);  // Timer
     idt_set_gate(33, (uint32_t)irq1_handler, 0x08, 0x8E);  // Keyboard
-    
-    // Install default handlers for other IRQs (optional)
-    for (int i = 34; i < 48; i++) {
-        idt_set_gate(i, (uint32_t)irq0_handler, 0x08, 0x8E);  // Default to timer handler for now
-    }
     
     asm volatile("sti");  // Enable interrupts
 }
@@ -167,6 +157,9 @@ void run_text_mode(void) {
 }
 
 void kernel_main(uint32_t magic, uint32_t mb_info_addr) {
+    (void)magic;  // Suppress unused parameter warning
+    (void)mb_info_addr;  // Suppress unused parameter warning
+    
     vga_init();
     
     // Install IDT and IRQs first
@@ -176,9 +169,12 @@ void kernel_main(uint32_t magic, uint32_t mb_info_addr) {
     // Initialize PIT timer with 100 Hz
     timer_init(100);
     
+    // Initialize memory (using multiboot info would be better, but simple for now)
+    memory_init(0, 32 * 1024 * 1024);  // Assume 32MB of memory
+    
     print_banner();
     keyboard_init();
     run_text_mode();
     
-    while (1) asm("hlt");
+    while (1) asm volatile("hlt");
 }
