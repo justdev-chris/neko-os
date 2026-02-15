@@ -1,6 +1,6 @@
 #include "timer.h"
 #include "../io.h"
-#include "../terminal/terminal.h"  // For terminal_update_tick
+#include "../terminal/terminal.h"
 
 // PIT I/O ports
 #define PIT_COMMAND 0x43
@@ -9,15 +9,6 @@
 // Timer variables
 static volatile uint32_t timer_ticks = 0;
 static const uint32_t TICKS_PER_SECOND = 100;  // We'll set PIT to 100 Hz
-
-// External function from terminal to update uptime
-extern void terminal_update_tick(void);
-
-// Timer interrupt handler
-void timer_handler(void) {
-    timer_ticks++;
-    terminal_update_tick();  // Update the terminal's uptime counter
-}
 
 // Initialize PIT timer
 void timer_init(uint32_t frequency) {
@@ -34,6 +25,12 @@ void timer_init(uint32_t frequency) {
     timer_ticks = 0;
 }
 
+// Timer interrupt handler
+void timer_handler(void) {
+    timer_ticks++;
+    terminal_update_tick();  // Update the terminal's uptime counter
+}
+
 uint32_t timer_get_ticks(void) {
     return timer_ticks;
 }
@@ -48,6 +45,6 @@ void timer_sleep(uint32_t milliseconds) {
     uint32_t ticks_to_wait = (milliseconds * TICKS_PER_SECOND) / 1000;
     
     while ((timer_ticks - start_ticks) < ticks_to_wait) {
-        asm("hlt");  // Halt CPU until next interrupt
+        asm volatile("hlt");  // Halt CPU until next interrupt
     }
 }
