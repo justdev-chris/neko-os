@@ -141,7 +141,8 @@ void kernel_main(uint32_t magic, uint32_t mb_info_addr) {
     timer_init(100);
     memory_init(0, 32 * 1024 * 1024);
     
-    print_banner();
+    print_banner();  // This prints the ASCII title
+    
     keyboard_init();
     
     asm volatile("sti");
