@@ -21,9 +21,7 @@ irq\num\()_handler:
     pushl %gs             # Push GS segment
     
     # Call C handler
-    pushl $\num           # Push IRQ number
     call irq\num\()_handler_c
-    addl $4, %esp         # Clean up stack
     
     popl %gs              # Restore segments
     popl %fs
