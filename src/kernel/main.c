@@ -133,28 +133,53 @@ void test_components(void) {
     vga_putchar(' ');
     vga_putchar('\b');
     
-    // Test timer (check if it's counting)
-    uint32_t start = timer_get_seconds();
+    // Test timer - wait for at least 2 ticks
+    uint32_t start = timer_get_ticks();
     int timeout = 0;
-    while (timer_get_seconds() == start && timeout < 1000000) {
+    
+    vga_puts("  Waiting for timer tick...\n");
+    
+    // Wait up to ~1 second (100 ticks = 1 second)
+    while (timer_get_ticks() - start < 2) {
         timeout++;
-        asm volatile("pause");
+        if (timeout > 10000000) {  // Timeout after ~1 second of CPU time
+            vga_puts("  Timer timeout! start=");
+            vga_putchar('0' + (start / 100));
+            vga_putchar('0' + ((start / 10) % 10));
+            vga_putchar('0' + (start % 10));
+            vga_puts(" current=");
+            uint32_t current = timer_get_ticks();
+            vga_putchar('0' + (current / 100));
+            vga_putchar('0' + ((current / 10) % 10));
+            vga_putchar('0' + (current % 10));
+            vga_putchar('\n');
+            terminal_panic("Timer not counting - PIT failure!");
+        }
+        
+        // Add a small pause to prevent CPU hogging
+        for (int i = 0; i < 100; i++) {
+            asm volatile("pause");
+        }
     }
-    if (timeout >= 1000000) {
-        terminal_panic("Timer not counting - PIT failure!");
-    }
+    
+    vga_puts("  Timer OK! Ticks: ");
+    uint32_t ticks = timer_get_ticks();
+    vga_putchar('0' + (ticks / 100));
+    vga_putchar('0' + ((ticks / 10) % 10));
+    vga_putchar('0' + (ticks % 10));
+    vga_putchar('\n');
     
     // Test memory detection
     if (memory_get_total() == 0) {
         terminal_panic("Memory detection failed!");
     }
-    if (memory_get_total() < 1024 * 1024) {  // Less than 1MB?
+    if (memory_get_total() < 1024 * 1024) {
         terminal_panic("Insufficient memory detected!");
     }
     
     // Test keyboard (simple presence test)
     uint8_t status = inb(0x64);
-    if (status == 0xFF) {  // Usually means no device
+    if (status == 0xFF) {
         terminal_panic("Keyboard controller not responding!");
     }
 }
