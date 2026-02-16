@@ -310,11 +310,7 @@ void terminal_execute_command(void) {
 }
 
 void terminal_run_shell(void) {
-    terminal_clear();
-    terminal_setcolor(0x0E);
-    terminal_writestring("NekoOS Terminal\n");
-    terminal_setcolor(0x0F);
-    terminal_writestring("Type 'help' for commands\n\n");
+    // DON'T clear the screen here - just print prompt
     terminal_print_prompt();
     
     // Declare timer_poll function
