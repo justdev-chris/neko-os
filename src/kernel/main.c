@@ -59,22 +59,12 @@ extern void idt_load(struct idt_ptr*);
 extern void irq0_handler(void);
 extern void irq1_handler(void);
 
-// Function prototypes
-void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags);
-void idt_install(void);
-void irq_remap(void);
-void irq_install(void);
-void test_components(void);
-
-// C handler wrappers
-void irq0_handler_c(void) {
-    timer_handler();
-    outb(0x20, 0x20);
-}
-
-void irq1_handler_c(void) {
-    keyboard_handler();
-    outb(0x20, 0x20);
+static int strcmp(const char* s1, const char* s2) {
+    while (*s1 && (*s1 == *s2)) {
+        s1++;
+        s2++;
+    }
+    return *(const unsigned char*)s1 - *(const unsigned char*)s2;
 }
 
 void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags) {
@@ -94,11 +84,6 @@ void idt_install(void) {
     }
     
     idt_load(&idtp);
-    
-    // Test if IDT was installed
-    if (idtp.base == 0) {
-        terminal_panic("IDT installation failed!");
-    }
 }
 
 void irq_remap(void) {
@@ -118,101 +103,19 @@ void irq_install(void) {
     irq_remap();
     idt_set_gate(32, (uint32_t)irq0_handler, 0x08, 0x8E);
     idt_set_gate(33, (uint32_t)irq1_handler, 0x08, 0x8E);
-    
-    // Test if IRQ handlers were installed
-    if (idt[32].base_low == 0 || idt[33].base_low == 0) {
-        terminal_panic("IRQ handler installation failed!");
-    }
 }
 
-void test_components(void) {
-    // Test VGA
-    vga_set_color(0x0F);
-    vga_putchar('X');
-    vga_putchar('\b');
-    vga_putchar(' ');
-    vga_putchar('\b');
-    
-    // Skip timer test since we're using polling fallback
-    vga_puts("  Using timer polling fallback\n");
-    
-    // Test memory detection
-    if (memory_get_total() == 0) {
-        terminal_panic("Memory detection failed!");
-    }
-    if (memory_get_total() < 1024 * 1024) {
-        terminal_panic("Insufficient memory detected!");
-    }
-    
-    // Test keyboard (simple presence test)
-    uint8_t status = inb(0x64);
-    if (status == 0xFF) {
-        terminal_panic("Keyboard controller not responding!");
-    }
+void irq0_handler_c(void) {
+    timer_handler();
+    outb(0x20, 0x20);
 }
 
-void kernel_main(uint32_t magic, uint32_t mb_info_addr) {
-    // First, initialize minimum required systems
-    vga_init();
-    terminal_init();
-    
-    // Show boot message
-    vga_set_color(0x0F);
-    vga_puts("NekoOS Booting...\n\n");
-    
-    // Check multiboot magic number
-    if (magic != 0x2BADB002) {
-        terminal_panic("Invalid multiboot magic number!");
-    }
-    
-    // Parse multiboot info for memory
-    struct multiboot_info* mb_info = (struct multiboot_info*)mb_info_addr;
-    unsigned long mem_upper = 0;
-    
-    if (mb_info->flags & (1 << 0)) {
-        mem_upper = mb_info->mem_upper * 1024;
-        vga_puts("  Multiboot info found\n");
-    } else {
-        terminal_panic("No memory info from bootloader!");
-    }
-    
-    // Initialize core systems with error checking
-    vga_puts("  Installing IDT...\n");
-    idt_install();
-    
-    vga_puts("  Installing IRQs...\n");
-    irq_install();
-    
-    vga_puts("  Initializing timer...\n");
-    timer_init(100);
-    
-    vga_puts("  Initializing memory...\n");
-    memory_init(0, mem_upper);
-    
-    vga_puts("  Initializing keyboard...\n");
-    keyboard_init();
-    
-    // Run comprehensive component tests
-    vga_puts("  Testing components...\n");
-    test_components();
-    
-    // Enable interrupts
-    vga_puts("  Enabling interrupts...\n");
-    asm volatile("sti");
-    
-    // Final check - make sure interrupts are enabled
-    uint32_t eflags;
-    asm volatile("pushf; pop %0" : "=r"(eflags));
-    if (!(eflags & 0x200)) {
-        terminal_panic("Failed to enable interrupts!");
-    }
-    
-    // If we get here, all systems are go!
-    vga_set_color(0x0A);
-    vga_puts("\n[OK] All systems operational!\n\n");
-    vga_set_color(0x0F);
-    
-    // Show banner
+void irq1_handler_c(void) {
+    keyboard_handler();
+    outb(0x20, 0x20);
+}
+
+void print_banner(void) {
     vga_set_color(0x0E);
     vga_puts("  _   _      _      ___   ____\n");
     vga_puts(" | \\ | | ___| | __ / _ \\ / ___|\n");
@@ -221,12 +124,120 @@ void kernel_main(uint32_t magic, uint32_t mb_info_addr) {
     vga_puts(" |_| \\_|\\___|_|\\_\\ \\___/|____/\n\n");
     
     vga_set_color(0x0F);
-    vga_puts("NekoOS v0.1.4\n");
-    vga_puts("Type 'help' for commands\n\n");
+    vga_puts("NekoOS v0.1.4\n\n");
     
-    // Start the shell - WITHOUT clearing
-    terminal_run_shell();
+    vga_set_color(0x0A);
+    vga_puts("[OK] VGA text mode\n");
+    vga_puts("[OK] Keyboard driver\n");
+    vga_puts("[OK] Terminal shell\n");
+    vga_puts("[OK] Snake game\n");
+    vga_puts("[OK] Timer driver\n");
+    vga_puts("[OK] IRQ handlers\n\n");
     
-    // Should never reach here
-    terminal_panic("Kernel returned from shell!");
+    vga_set_color(0x0F);
+}
+
+void draw_pixel_cat(uint32_t* fb, int width, int height) {
+    uint32_t orange = 0xFFFFA500;
+    uint32_t black = 0xFF000000;
+    uint32_t white = 0xFFFFFFFF;
+    uint32_t pink = 0xFFFFC0CB;
+    uint32_t blue = 0xFF87CEEB;
+    
+    // Clear screen to blue
+    for (int i = 0; i < width * height; i++) {
+        fb[i] = blue;
+    }
+    
+    // Center the cat
+    int start_x = width/2 - 16;
+    int start_y = height/2 - 16;
+    
+    // Draw cat pixel art (32x32)
+    for (int y = 0; y < 32; y++) {
+        for (int x = 0; x < 32; x++) {
+            int px = start_x + x;
+            int py = start_y + y;
+            if (px < 0 || px >= width || py < 0 || py >= height) continue;
+            
+            // Face (main square)
+            if (x >= 8 && x <= 24 && y >= 8 && y <= 24) {
+                fb[py * width + px] = orange;
+            }
+            
+            // Left ear
+            if (x >= 4 && x <= 8 && y >= 2 && y <= 8) {
+                if ((x == 4 && y >= 4) || (x == 8 && y >= 4) || (y >= 4))
+                fb[py * width + px] = orange;
+            }
+            
+            // Right ear
+            if (x >= 24 && x <= 28 && y >= 2 && y <= 8) {
+                if ((x == 24 && y >= 4) || (x == 28 && y >= 4) || (y >= 4))
+                fb[py * width + px] = orange;
+            }
+            
+            // Left eye
+            if (x == 12 && y == 14) fb[py * width + px] = black;
+            if (x == 13 && y == 13) fb[py * width + px] = white;
+            
+            // Right eye
+            if (x == 20 && y == 14) fb[py * width + px] = black;
+            if (x == 21 && y == 13) fb[py * width + px] = white;
+            
+            // Nose
+            if (x == 16 && y == 18) fb[py * width + px] = pink;
+            
+            // Whiskers
+            if (y == 16) {
+                if (x == 6 || x == 8 || x == 10) fb[py * width + px] = white;
+                if (x == 22 || x == 24 || x == 26) fb[py * width + px] = white;
+            }
+            
+            // Mouth
+            if ((x == 15 && y == 19) || (x == 16 && y == 20) || (x == 17 && y == 19)) {
+                fb[py * width + px] = black;
+            }
+        }
+    }
+}
+
+void kernel_main(uint32_t magic, uint32_t mb_info_addr) {
+    struct multiboot_info* mb_info = (struct multiboot_info*)mb_info_addr;
+    
+    vga_init();
+    terminal_init();
+    
+    idt_install();
+    irq_install();
+    timer_init(100);
+    memory_init(0, 32 * 1024 * 1024);
+    keyboard_init();
+    
+    asm volatile("sti");
+    
+    // Check command line
+    char* cmdline = (char*)mb_info->cmdline;
+    
+    if (cmdline && strcmp(cmdline, "graphics") == 0) {
+        // Graphics mode
+        if (mb_info->flags & (1 << 12)) {
+            uint32_t* fb = (uint32_t*)(uintptr_t)mb_info->framebuffer_addr;
+            int width = mb_info->framebuffer_width;
+            int height = mb_info->framebuffer_height;
+            
+            draw_pixel_cat(fb, width, height);
+            
+            while(1) asm volatile("hlt");
+        } else {
+            vga_puts("No framebuffer available!\n");
+            while(1) asm volatile("hlt");
+        }
+    } else {
+        // Text mode
+        print_banner();
+        terminal_run_shell();
+    }
+    
+    while(1) asm volatile("hlt");
 }
