@@ -169,8 +169,8 @@ void kernel_main(uint32_t magic, uint32_t mb_info_addr) {
     struct multiboot_info* mb_info = (struct multiboot_info*)mb_info_addr;
     unsigned long mem_upper = 0;
     
-    if (mb_info->flags & (1 << 0)) {  // Check if mem_upper is valid
-        mem_upper = mb_info->mem_upper * 1024;  // Convert to bytes
+    if (mb_info->flags & (1 << 0)) {
+        mem_upper = mb_info->mem_upper * 1024;
         vga_puts("  Multiboot info found\n");
     } else {
         terminal_panic("No memory info from bootloader!");
@@ -187,7 +187,7 @@ void kernel_main(uint32_t magic, uint32_t mb_info_addr) {
     timer_init(100);
     
     vga_puts("  Initializing memory...\n");
-    memory_init(0, mem_upper);  // Use actual detected memory
+    memory_init(0, mem_upper);
     
     vga_puts("  Initializing keyboard...\n");
     keyboard_init();
@@ -224,7 +224,7 @@ void kernel_main(uint32_t magic, uint32_t mb_info_addr) {
     vga_puts("NekoOS v0.1.4\n");
     vga_puts("Type 'help' for commands\n\n");
     
-    // Start the shell
+    // Start the shell - WITHOUT clearing
     terminal_run_shell();
     
     // Should never reach here
