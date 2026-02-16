@@ -12,8 +12,7 @@
 static char input_buffer[MAX_INPUT];
 static size_t input_pos = 0;
 
-static unsigned long system_ticks = 0;
-static unsigned int tick_counter = 0;
+static unsigned long system_seconds = 0;
 
 extern int cursor_x;
 extern int cursor_y;
@@ -26,7 +25,7 @@ static int strcmp(const char* s1, const char* s2) {
     return *(const unsigned char*)s1 - *(const unsigned char*)s2;
 }
 
-static void itoa(unsigned long num, char* str, int base) {
+static void itoa(unsigned long num, char* str) {
     int i = 0;
     if (num == 0) {
         str[i++] = '0';
@@ -35,12 +34,12 @@ static void itoa(unsigned long num, char* str, int base) {
     }
     
     while (num != 0) {
-        int rem = num % base;
-        str[i++] = (rem > 9) ? (rem - 10) + 'a' : rem + '0';
-        num = num / base;
+        str[i++] = '0' + (num % 10);
+        num = num / 10;
     }
     str[i] = '\0';
     
+    // Reverse
     int start = 0;
     int end = i - 1;
     while (start < end) {
@@ -53,12 +52,12 @@ static void itoa(unsigned long num, char* str, int base) {
 }
 
 static void format_uptime(char* buffer) {
-    unsigned long total_seconds = system_ticks;
-    unsigned long minutes = total_seconds / 60;
+    unsigned long seconds = system_seconds;
+    unsigned long minutes = seconds / 60;
     unsigned long hours = minutes / 60;
     unsigned long days = hours / 24;
     
-    unsigned long seconds = total_seconds % 60;
+    seconds %= 60;
     minutes %= 60;
     hours %= 24;
     
@@ -66,23 +65,23 @@ static void format_uptime(char* buffer) {
     int pos = 0;
     
     if (days > 0) {
-        itoa(days, num, 10);
+        itoa(days, num);
         for (int i = 0; num[i]; i++) buffer[pos++] = num[i];
         buffer[pos++] = 'd';
         buffer[pos++] = ' ';
     }
     
-    itoa(hours, num, 10);
+    itoa(hours, num);
     if (hours < 10) buffer[pos++] = '0';
     for (int i = 0; num[i]; i++) buffer[pos++] = num[i];
     buffer[pos++] = ':';
     
-    itoa(minutes, num, 10);
+    itoa(minutes, num);
     if (minutes < 10) buffer[pos++] = '0';
     for (int i = 0; num[i]; i++) buffer[pos++] = num[i];
     buffer[pos++] = ':';
     
-    itoa(seconds, num, 10);
+    itoa(seconds, num);
     if (seconds < 10) buffer[pos++] = '0';
     for (int i = 0; num[i]; i++) buffer[pos++] = num[i];
     
@@ -97,18 +96,18 @@ void terminal_writestring_color(const char* data, uint8_t color) {
 }
 
 void terminal_update_tick(void) {
-    tick_counter++;
-    if (tick_counter >= 100) {
-        system_ticks++;
-        tick_counter = 0;
+    static int counter = 0;
+    counter++;
+    if (counter >= 100) {
+        system_seconds++;
+        counter = 0;
     }
 }
 
 void terminal_init(void) {
     vga_clear();
     vga_set_color(0x0F);
-    system_ticks = 0;
-    tick_counter = 0;
+    system_seconds = 0;
     cursor_x = 0;
     cursor_y = 0;
 }
@@ -138,25 +137,26 @@ void terminal_print_prompt(void) {
 }
 
 void terminal_panic(const char* message) {
-    asm volatile("cli");
+    asm volatile("cli");  // Disable interrupts
     
-    vga_set_color(0x1F);
+    vga_set_color(0x1F);  // Blue background, white text
     vga_clear();
     
     vga_puts("\n\n\n");
-    vga_set_color(0x1C);
+    vga_set_color(0x1C);  // Red on blue
     vga_puts("    /\\_/\\\n");
     vga_puts("   ( x.x )  NEKOOS PANIC\n");
     vga_puts("    > ^ <\n\n");
     
-    vga_set_color(0x1F);
+    vga_set_color(0x1F);  // White on blue
     vga_puts("    ");
     vga_puts(message);
     vga_puts("\n\n");
     
-    vga_set_color(0x1E);
+    vga_set_color(0x1E);  // Yellow on blue
     vga_puts("    System halted.\n\n");
     
+    // Halt forever
     while(1) {
         asm volatile("hlt");
     }
@@ -171,144 +171,74 @@ void terminal_screenfetch(void) {
     terminal_writestring("          > ^ <\n\n");
     
     terminal_setcolor(0x0F);
-    terminal_writestring("  ");
-    terminal_setcolor(0x0C);
-    terminal_writestring("OS");
-    terminal_setcolor(0x0F);
-    terminal_writestring(": NekoOS\n");
-    
-    terminal_writestring("  ");
-    terminal_setcolor(0x0E);
-    terminal_writestring("Host");
-    terminal_setcolor(0x0F);
-    terminal_writestring(": NekoPC\n");
-    
-    terminal_writestring("  ");
-    terminal_setcolor(0x0A);
-    terminal_writestring("Kernel");
-    terminal_setcolor(0x0F);
-    terminal_writestring(": 0.1.4-neko\n");
+    terminal_writestring("  OS: NekoOS\n");
+    terminal_writestring("  Host: NekoPC\n");
+    terminal_writestring("  Kernel: 0.1.4-neko\n");
     
     char uptime_str[50];
     format_uptime(uptime_str);
-    terminal_writestring("  ");
-    terminal_setcolor(0x0B);
-    terminal_writestring("Uptime");
-    terminal_setcolor(0x0F);
-    terminal_writestring(": ");
+    terminal_writestring("  Uptime: ");
     terminal_writestring(uptime_str);
     terminal_writestring("\n");
-    
-    terminal_writestring("  ");
-    terminal_setcolor(0x0D);
-    terminal_writestring("Shell");
-    terminal_setcolor(0x0F);
-    terminal_writestring(": NekoSH 1.0\n");
 }
 
 void terminal_meminfo(void) {
     unsigned long total_mem = memory_get_total();
     unsigned long used_mem = memory_get_used();
-    unsigned long free_mem = total_mem - used_mem;
     
-    terminal_setcolor(0x0F);
+    char num_str[20];
+    
     terminal_writestring("Memory Information:\n");
     terminal_writestring("==================\n\n");
     
-    terminal_setcolor(0x0A);
     terminal_writestring("Total Memory: ");
-    terminal_setcolor(0x0F);
-    char num_str[20];
-    itoa(total_mem, num_str, 10);
+    itoa(total_mem, num_str);
     terminal_writestring(num_str);
     terminal_writestring(" bytes\n");
     
-    terminal_setcolor(0x0C);
     terminal_writestring("Used Memory:  ");
-    terminal_setcolor(0x0F);
-    itoa(used_mem, num_str, 10);
+    itoa(used_mem, num_str);
     terminal_writestring(num_str);
     terminal_writestring(" bytes\n");
-    
-    terminal_setcolor(0x0E);
-    terminal_writestring("Free Memory:  ");
-    terminal_setcolor(0x0F);
-    itoa(free_mem, num_str, 10);
-    terminal_writestring(num_str);
-    terminal_writestring(" bytes\n");
-    
-    unsigned int percent = (used_mem * 100) / total_mem;
-    terminal_writestring("\nUsage: ");
-    itoa(percent, num_str, 10);
-    terminal_writestring(num_str);
-    terminal_writestring("% ");
-    
-    terminal_writestring("[");
-    for (unsigned int i = 0; i < 20; i++) {
-        if (i < percent / 5) {
-            terminal_setcolor(0x0C);
-            terminal_writestring("#");
-        } else {
-            terminal_setcolor(0x08);
-            terminal_writestring(".");
-        }
-    }
-    terminal_setcolor(0x0F);
-    terminal_writestring("]\n");
 }
 
 void terminal_uptime(void) {
     char uptime_str[50];
     format_uptime(uptime_str);
-    
-    terminal_setcolor(0x0B);
     terminal_writestring("System uptime: ");
-    terminal_setcolor(0x0F);
     terminal_writestring(uptime_str);
     terminal_writestring("\n");
 }
 
-static int cat_eye_state = 0;
 void terminal_cat_clock(void) {
     char time_str[9];
     
-    unsigned long total_seconds = system_ticks;
-    unsigned long hours = (total_seconds / 3600) % 24;
-    unsigned long minutes = (total_seconds / 60) % 60;
-    unsigned long seconds = total_seconds % 60;
+    unsigned long seconds = system_seconds % 60;
+    unsigned long minutes = (system_seconds / 60) % 60;
+    unsigned long hours = (system_seconds / 3600) % 24;
     
     char num[3];
     int pos = 0;
     
-    itoa(hours, num, 10);
+    itoa(hours, num);
     if (hours < 10) time_str[pos++] = '0';
     for (int i = 0; num[i]; i++) time_str[pos++] = num[i];
     time_str[pos++] = ':';
     
-    itoa(minutes, num, 10);
+    itoa(minutes, num);
     if (minutes < 10) time_str[pos++] = '0';
     for (int i = 0; num[i]; i++) time_str[pos++] = num[i];
     time_str[pos++] = ':';
     
-    itoa(seconds, num, 10);
+    itoa(seconds, num);
     if (seconds < 10) time_str[pos++] = '0';
     for (int i = 0; num[i]; i++) time_str[pos++] = num[i];
     time_str[pos] = '\0';
     
     terminal_setcolor(0x0E);
-    if (seconds % 4 == 0 && cat_eye_state == 0) {
-        cat_eye_state = 1;
-        terminal_writestring(" =^-^= ");
-    } else if (seconds % 4 == 2) {
-        cat_eye_state = 0;
-        terminal_writestring(" =^.^= ");
-    } else {
-        terminal_writestring(" =^.^= ");
-    }
-    
+    terminal_writestring(" =^.^= ");
     terminal_setcolor(0x0F);
     terminal_writestring(time_str);
-    
     terminal_setcolor(0x0E);
     terminal_writestring(" =^.^=\n");
 }
@@ -324,20 +254,16 @@ void terminal_execute_command(void) {
     terminal_writestring("\n");
     
     if (strcmp(input_buffer, "help") == 0) {
-        terminal_setcolor(0x0A);
         terminal_writestring("Available commands:\n");
-        terminal_setcolor(0x0F);
         terminal_writestring("  help      - Show this help\n");
         terminal_writestring("  clear     - Clear screen\n");
         terminal_writestring("  snake     - Play Snake game\n");
-        terminal_writestring("  neko game - Play Neko game\n");
         terminal_writestring("  neko      - Display cat\n");
         terminal_writestring("  reboot    - Reboot system\n");
-        terminal_writestring("  meminfo   - Show memory info\n");
         terminal_writestring("  uptime    - Show system uptime\n");
+        terminal_writestring("  catclock  - Display cat clock\n");
+        terminal_writestring("  meminfo   - Show memory info\n");
         terminal_writestring("  screenfetch - Show system info\n");
-        terminal_writestring("  catclock  - Display animated cat clock\n");
-        terminal_writestring("  color     - Test colors\n");
         terminal_writestring("  panic     - Test panic screen\n");
     } 
     else if (strcmp(input_buffer, "clear") == 0) {
@@ -347,10 +273,6 @@ void terminal_execute_command(void) {
         snake_run();
         terminal_clear();
     }
-    else if (strcmp(input_buffer, "neko game") == 0) {
-        run_neko_game();
-        terminal_clear();
-    }
     else if (strcmp(input_buffer, "neko") == 0) {
         terminal_setcolor(0x0E);
         terminal_writestring("   /\\_/\\\n");
@@ -358,30 +280,21 @@ void terminal_execute_command(void) {
         terminal_writestring("   > ^ <\n");
     }
     else if (strcmp(input_buffer, "reboot") == 0) {
-        terminal_setcolor(0x0C);
         terminal_writestring("Rebooting...\n");
         outb(0x64, 0xFE);
         while(1);
     }
-    else if (strcmp(input_buffer, "meminfo") == 0) {
-        terminal_meminfo();
-    }
     else if (strcmp(input_buffer, "uptime") == 0) {
         terminal_uptime();
-    }
-    else if (strcmp(input_buffer, "screenfetch") == 0) {
-        terminal_screenfetch();
     }
     else if (strcmp(input_buffer, "catclock") == 0) {
         terminal_cat_clock();
     }
-    else if (strcmp(input_buffer, "color") == 0) {
-        for (int i = 0; i < 16; i++) {
-            terminal_setcolor(i);
-            terminal_writestring(" Neko ");
-        }
-        terminal_setcolor(0x0F);
-        terminal_writestring("\n");
+    else if (strcmp(input_buffer, "meminfo") == 0) {
+        terminal_meminfo();
+    }
+    else if (strcmp(input_buffer, "screenfetch") == 0) {
+        terminal_screenfetch();
     }
     else if (strcmp(input_buffer, "panic") == 0) {
         terminal_panic("Test panic from command");
