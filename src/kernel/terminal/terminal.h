@@ -14,5 +14,9 @@ void terminal_execute_command(void);
 void terminal_run_shell(void);
 void terminal_update_tick(void);
 void terminal_panic(const char* message);
+void terminal_screenfetch(void);
+void terminal_meminfo(void);
+void terminal_uptime(void);
+void terminal_cat_clock(void);
 
 #endif
