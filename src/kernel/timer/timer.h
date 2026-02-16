@@ -8,5 +8,6 @@ void timer_handler(void);
 uint32_t timer_get_ticks(void);
 uint32_t timer_get_seconds(void);
 void timer_sleep(uint32_t milliseconds);
+void timer_poll(void);
 
 #endif
