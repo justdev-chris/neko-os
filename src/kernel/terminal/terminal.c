@@ -317,7 +317,18 @@ void terminal_run_shell(void) {
     terminal_writestring("Type 'help' for commands\n\n");
     terminal_print_prompt();
     
+    // Declare timer_poll function
+    extern void timer_poll(void);
+    int poll_counter = 0;
+    
     while (1) {
+        // Poll timer manually every loop iteration
+        poll_counter++;
+        if (poll_counter >= 1000) {
+            timer_poll();
+            poll_counter = 0;
+        }
+        
         char c = keyboard_getchar();
         if (c) {
             if (c == '\n') {
