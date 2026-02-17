@@ -1,5 +1,5 @@
 # NekoOS 🐱
---v0.1.4--
+-v0.1.4-
 
 A simple hobby operating system with a cat theme.
 
