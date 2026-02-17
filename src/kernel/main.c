@@ -59,14 +59,6 @@ extern void idt_load(struct idt_ptr*);
 extern void irq0_handler(void);
 extern void irq1_handler(void);
 
-static int strcmp(const char* s1, const char* s2) {
-    while (*s1 && (*s1 == *s2)) {
-        s1++;
-        s2++;
-    }
-    return *(const unsigned char*)s1 - *(const unsigned char*)s2;
-}
-
 void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags) {
     idt[num].base_low = base & 0xFFFF;
     idt[num].base_high = (base >> 16) & 0xFFFF;
@@ -84,6 +76,7 @@ void idt_install(void) {
     }
     
     idt_load(&idtp);
+    vga_puts("  IDT installed\n");
 }
 
 void irq_remap(void) {
@@ -97,12 +90,14 @@ void irq_remap(void) {
     outb(0xA1, 0x01);
     outb(0x21, 0xFD);
     outb(0xA1, 0xFF);
+    vga_puts("  IRQ remapped\n");
 }
 
 void irq_install(void) {
     irq_remap();
     idt_set_gate(32, (uint32_t)irq0_handler, 0x08, 0x8E);
     idt_set_gate(33, (uint32_t)irq1_handler, 0x08, 0x8E);
+    vga_puts("  IRQ handlers installed\n");
 }
 
 void irq0_handler_c(void) {
@@ -137,107 +132,36 @@ void print_banner(void) {
     vga_set_color(0x0F);
 }
 
-void draw_pixel_cat(uint32_t* fb, int width, int height) {
-    uint32_t orange = 0xFFFFA500;
-    uint32_t black = 0xFF000000;
-    uint32_t white = 0xFFFFFFFF;
-    uint32_t pink = 0xFFFFC0CB;
-    uint32_t blue = 0xFF87CEEB;
-    
-    // Clear screen to blue
-    for (int i = 0; i < width * height; i++) {
-        fb[i] = blue;
-    }
-    
-    // Center the cat
-    int start_x = width/2 - 16;
-    int start_y = height/2 - 16;
-    
-    // Draw cat pixel art (32x32)
-    for (int y = 0; y < 32; y++) {
-        for (int x = 0; x < 32; x++) {
-            int px = start_x + x;
-            int py = start_y + y;
-            if (px < 0 || px >= width || py < 0 || py >= height) continue;
-            
-            // Face (main square)
-            if (x >= 8 && x <= 24 && y >= 8 && y <= 24) {
-                fb[py * width + px] = orange;
-            }
-            
-            // Left ear
-            if (x >= 4 && x <= 8 && y >= 2 && y <= 8) {
-                if ((x == 4 && y >= 4) || (x == 8 && y >= 4) || (y >= 4))
-                fb[py * width + px] = orange;
-            }
-            
-            // Right ear
-            if (x >= 24 && x <= 28 && y >= 2 && y <= 8) {
-                if ((x == 24 && y >= 4) || (x == 28 && y >= 4) || (y >= 4))
-                fb[py * width + px] = orange;
-            }
-            
-            // Left eye
-            if (x == 12 && y == 14) fb[py * width + px] = black;
-            if (x == 13 && y == 13) fb[py * width + px] = white;
-            
-            // Right eye
-            if (x == 20 && y == 14) fb[py * width + px] = black;
-            if (x == 21 && y == 13) fb[py * width + px] = white;
-            
-            // Nose
-            if (x == 16 && y == 18) fb[py * width + px] = pink;
-            
-            // Whiskers
-            if (y == 16) {
-                if (x == 6 || x == 8 || x == 10) fb[py * width + px] = white;
-                if (x == 22 || x == 24 || x == 26) fb[py * width + px] = white;
-            }
-            
-            // Mouth
-            if ((x == 15 && y == 19) || (x == 16 && y == 20) || (x == 17 && y == 19)) {
-                fb[py * width + px] = black;
-            }
-        }
-    }
-}
-
 void kernel_main(uint32_t magic, uint32_t mb_info_addr) {
-    struct multiboot_info* mb_info = (struct multiboot_info*)mb_info_addr;
+    (void)magic;
+    (void)mb_info_addr;
     
     vga_init();
     terminal_init();
     
+    vga_puts("Installing IDT...\n");
     idt_install();
+    
+    vga_puts("Installing IRQs...\n");
     irq_install();
+    
+    vga_puts("Initializing timer...\n");
     timer_init(100);
+    
+    vga_puts("Initializing memory...\n");
     memory_init(0, 32 * 1024 * 1024);
+    
+    print_banner();
+    
+    vga_puts("Initializing keyboard...\n");
     keyboard_init();
     
+    vga_puts("Enabling interrupts...\n");
     asm volatile("sti");
+    vga_puts("Interrupts enabled!\n");
     
-    // Check command line
-    char* cmdline = (char*)mb_info->cmdline;
+    vga_puts("Starting shell...\n\n");
+    terminal_run_shell();
     
-    if (cmdline && strcmp(cmdline, "graphics") == 0) {
-        // Graphics mode
-        if (mb_info->flags & (1 << 12)) {
-            uint32_t* fb = (uint32_t*)(uintptr_t)mb_info->framebuffer_addr;
-            int width = mb_info->framebuffer_width;
-            int height = mb_info->framebuffer_height;
-            
-            draw_pixel_cat(fb, width, height);
-            
-            while(1) asm volatile("hlt");
-        } else {
-            vga_puts("No framebuffer available!\n");
-            while(1) asm volatile("hlt");
-        }
-    } else {
-        // Text mode
-        print_banner();
-        terminal_run_shell();
-    }
-    
-    while(1) asm volatile("hlt");
+    while (1) asm volatile("hlt");
 }
